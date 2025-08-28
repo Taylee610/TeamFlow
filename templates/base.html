@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lamg="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Core Web Application</title>
+        <link rel="stylesheet" 
+        href="https://cdn.simplecss.org/simple.min.css">
+    </head>
+    <body>
+        <header>
+            <h1><a href="/">Team Task Manager</a></h1>
+            <nav>
+                {%if user.is_authenticated %}
+                <span>{{ user.email}}</span>
+                <a href= "{% url 'project-create' %}">New Project</a>
+                <a href="{% url 'logout' %}">Logout</a>
+                {% else %}
+                <a href="{% url 'login' %}">Login</a>
+                <a href="{% url 'signup' %}">Sign Up</a>
+                {% endif %}
+            </nav>
+        </header>
+        <main>
+            {% block content %}{% endblock%}
+            <main>
+            </body>
+            </html>

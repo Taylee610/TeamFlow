@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ object.name }}</h2>
+<p>{{ object.description|linebreaks }}</p>
+
+<h3>Tasks</h3>
+<p>
+    <a href="{% url 'task-create' object.pk %}">+ New Task</a>
+</p>
+
+{% if object.tasks.all %}
+<table>
+    <thread>
+        <tr>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Due</th>
+            <th>Assignee</th>
+            <th></th>
+        </tr>
+    </thread>
+    <tbody>
+        {% for task in object.tasks.all %}
+        <tr>
+            <td>{{ task.title }}</td>
+            <td>{{ task.get_status_display }}</td>
+            <td>{{ task.due_date }}</td>
+            <td>{{ task.assigned_to }} %} 
+{{ task.assigned_to.email }}{% else %} - {% endif %}</td>
+<td>
+    <a href="{% url 'task-edit' task.pk %}">Edit</a>
+    <form method="post" action="{% url 'task-delete' task.pk %}" style="displayinline">{% csrf_token %}
+        <button type="submit" onclick="returnconfirm('Delete task?')">Delete</button>
+    </form>
+</td>
+</tr>
+{% empty %}
+<tr><td colspan="5">No tasks yet.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+{% endblock %}
