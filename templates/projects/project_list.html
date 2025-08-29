@@ -3,17 +3,17 @@
 <h2>Your Projects</h2>
 {% if projects_list %}
 <ul>
-    {% for project in object_list %}
-    <li>
-        <a href="{%url 'project-detail' project.pk %}">{{ project.name }}</a>
-        <small>created {{ project.created_at|date:"d-m-Y" }}</small>
-        <form method="post" action="{% url 'project-delete' project.pk %}" style="display:inline">{% csrf_token %}"
-            <button type="submit" onclick="return confirm('Delete project?')">Delete</button>
-        </form>
-    </li>
-    {% endfor %}
-    </ ul>
-    {% else %}
-    <p>No projects yet. <a href="{% url 'project-create' %}">Create your first project</a>.</p>
-    {% endif %}
-    {% endblock %}
+{% for project in object_list %}
+<li>
+    <a href="{%url 'project-detail' project.pk %}">{{ project.name }}</a>
+    <small>created {{ project.created_at|date:"d-m-Y" }}</small>
+    <form method="post" action="{% url 'project-delete' project.pk %}" style="display:inline">{% csrf_token %}"
+        <button type="submit" onclick="return confirm('Delete project?')">Delete</button>
+    </form>
+</li>
+{% endfor %}
+</ ul>
+{% else %}
+<p>No projects yet. <a href="{% url 'project-create' %}">Create your first project</a>.</p>
+{% endif %}
+{% endblock %}
