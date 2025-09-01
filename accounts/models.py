@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
+class User(AbstractBaseUser):
+    pass
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -37,3 +39,5 @@ class User(AbstractBaseUser, PermissionsMixin):
 
         def __str__(self):
             return self.email
+
+

@@ -24,7 +24,7 @@ class Task(models.Model):
     IN_PROGRESS = 'in_progress'
     DONE = 'done'
     STATUS_CHOICES = [(TODO,'todo'), (IN_PROGRESS,'in_progress'), (DONE,'done')]
-
+    
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
@@ -33,6 +33,7 @@ class Task(models.Model):
     due_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    attachment = models.FileField(upload_to='task_files/', blank=True, null=True)
 
     class Meta:
         ordering = ('status','due_date','title')
