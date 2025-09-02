@@ -96,8 +96,8 @@ class TaskUpdateView(UpdateView):
     template_name = 'tasks/task_form.html'
     success_url = reverse_lazy('task-list')  
 
-    def get_object(self, queryset=None):
-        return get_object_or_404(Task, pk=self.kwargs['id'])
+    def get_object(self):
+        return get_object_or_404(Task, pk=self.kwargs['pk'])
 
 
                                 
