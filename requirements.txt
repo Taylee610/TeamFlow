@@ -3,3 +3,10 @@ Django==5.0
 psycopg2-binary==2.9.10
 python-decouple==3.8
 sqlparse==0.5.3
+djangorestframework
+djangorestframework-simplejwt
+django-filter
+drf-spectacular
+channels
+channels-redis
+daphne
