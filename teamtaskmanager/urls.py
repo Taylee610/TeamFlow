@@ -17,12 +17,14 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from core.views import landing_redirect
 from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', landing_redirect, name='landing'),
     path('accounts/', include('accounts.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path('projects/', include('projects.urls')),
