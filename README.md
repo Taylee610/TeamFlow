@@ -31,5 +31,5 @@ How to Run
 
 
 ```bash
-git clone https://github.com/<your-username>/CoreWebpplication.git
+git clone https://github.com/<Taylee610>/CoreWebpplication.git
 cd CoreWebpplication
