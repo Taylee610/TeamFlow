@@ -43,13 +43,12 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_spectacular',
     'channels',
-    'dashboard',
-    'accounts',
-    'tasks',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -63,7 +62,7 @@ ROOT_URLCONF = 'teamtaskmanager.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -87,11 +86,6 @@ CHANNEL_LAYERS = {
         },
     },
 }
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-SECRET_KEY = config('SECRET_KEY')
-DEBUG = config('DEBUG', default=True, cast=bool)
 
 USE_POSTGRESQL = config('USE_POSTGRESQL', default=True, cast=bool)
 
@@ -126,9 +120,14 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_REDIRECT_URL = 'project-list'
-LOGOUT_REDIRECT_URL = 'login'
-LOG_IN_URL = 'login'
+# Allows the React dev server (Vite, usually http://localhost:5173) to call
+# this API. Add your deployed frontend URL here too once it's live.
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:5173,http://127.0.0.1:5173',
+    cast=lambda v: [s.strip() for s in v.split(',') if s.strip()],
+)
+CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

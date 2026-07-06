@@ -30,16 +30,15 @@ class TaskViewSet(viewsets.ModelViewSet):
     ordering_fields = ['due_date', 'status']
 
     def get_queryset(self):
-        
         qs_owner = Task.objects.filter(project__owner=self.request.user)
         qs_assigned = Task.objects.filter(assigned_to=self.request.user)
         return (qs_owner | qs_assigned).distinct()
 
     def perform_create(self, serializer):
         project = serializer.validated_data.get('project')
-        
+
         if project.owner != self.request.user:
-            return Response({'detail': 'You may only create tasks in your own projects.'}, status=status.HTTP_403_FORBIDDEN)
+            raise permissions.PermissionDenied('You may only create tasks in your own projects.')
         task = serializer.save()
         self._notify_task_update(task)
 
@@ -48,14 +47,14 @@ class TaskViewSet(viewsets.ModelViewSet):
         self._notify_task_update(task)
 
     def perform_destroy(self, instance):
-        
         if instance.project.owner != self.request.user:
             raise permissions.PermissionDenied("Only project owner can delete tasks.")
         instance.delete()
-        
-    
+
     def _notify_task_update(self, task):
         channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
         group_name = f"project_{task.project.id}"
         async_to_sync(channel_layer.group_send)(
             group_name,

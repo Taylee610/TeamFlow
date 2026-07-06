@@ -1,11 +1,15 @@
-from django.shortcuts import redirect
+from django.http import JsonResponse
 
-def landing_redirect(request):
+
+def api_root(request):
+    """Simple health-check / welcome response for the API root.
+
+    Django serves the API only now -- the React app (in /src) is the UI
+    and talks to these endpoints directly.
     """
-    Redirect users depending on authentication status:
-    - Authenticated users → project list (dashboard)
-    - Unauthenticated users → login page
-    """
-    if request.user.is_authenticated:
-        return redirect('project-list')  # your ProjectListView URL
-    return redirect('login')  # Django's login page
+    return JsonResponse({
+        "status": "ok",
+        "message": "TeamFlow API is running.",
+        "docs": "/api/docs/",
+        "schema": "/api/schema/",
+    })

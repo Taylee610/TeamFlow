@@ -213,3 +213,8 @@ __marimo__/
 
 tenancy/
 tenant_map.py
+
+# Frontend
+node_modules/
+dist/
+teamtaskdb

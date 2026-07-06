@@ -1,29 +1,30 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Tasks from "./pages/Tasks";
-import Navbar from "./components/Navbar";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { useState } from "react";
-
-const [dark, setDark] = useState(false);
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import Dashboard from './pages/Dashboard'
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Navbar />
+      <AuthProvider>
+        <ToastContainer position="top-right" autoClose={3000} />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
 
-      <ToastContainer />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+          </Route>
 
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/tasks" element={<Tasks />} />
-      </Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
-  );
-
-  <div style={{ background: dark ? "#111" : "#fff", color: dark ? "#fff" : "#000" }}></div>
+  )
 }

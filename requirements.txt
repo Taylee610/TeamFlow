@@ -10,3 +10,5 @@ drf-spectacular
 channels
 channels-redis
 daphne
+django-cors-headers
+anthropic
