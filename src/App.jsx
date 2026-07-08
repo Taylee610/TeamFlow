@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import Kanban from './pages/Kanban'
+import Chat from './pages/Chat'
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/projects/:id/kanban" element={<Kanban />} />
+              <Route path="/chat" element={<Chat />} /> 
             </Route>
           </Route>
 
