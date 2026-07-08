@@ -7,6 +7,7 @@ class Project(models.Model):
     description = models.TextField(blank=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='projects')
     created_at = models.DateTimeField(auto_now_add=True)
+    members = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='member_projects', blank=True)
 
     class Meta:
         ordering = ['-created_at']
