@@ -1,0 +1,11 @@
+Hi {{ assignee_name }},
+
+{{ assigner_name }} assigned you a task in {{ project_name }}:
+
+  {{ task_title }}
+{% if due_date %}
+Due: {{ due_date }}
+{% endif %}
+View it here: {{ task_url }}
+
+-- TeamFlow

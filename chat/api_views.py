@@ -2,7 +2,9 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -13,6 +15,8 @@ from .serializers import (
     MessageSerializer, MessageCreateSerializer, CannedResponseSerializer,
 )
 from .permissions import IsConversationParticipant
+
+User = get_user_model()
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -81,6 +85,32 @@ class ConversationViewSet(viewsets.ModelViewSet):
         participant.last_read_at = timezone.now()
         participant.save(update_fields=['last_read_at'])
         return Response({'last_read_at': participant.last_read_at})
+
+    @action(detail=False, methods=['get'], url_path='my')
+    def my(self, request):
+        """Support conversations assigned to the current agent."""
+        qs = self.get_queryset().filter(type=Conversation.SUPPORT, assigned_agent=request.user)
+        return Response(ConversationSerializer(qs, many=True, context={'request': request}).data)
+
+    @action(detail=False, methods=['get'], url_path='unassigned')
+    def unassigned(self, request):
+        """Support conversations nobody has picked up yet."""
+        qs = self.get_queryset().filter(type=Conversation.SUPPORT, assigned_agent__isnull=True)
+        return Response(ConversationSerializer(qs, many=True, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'], url_path='assign')
+    def assign(self, request, pk=None):
+        """Assign a support conversation to an agent (defaults to self)."""
+        conversation = self.get_object()
+        if conversation.type != Conversation.SUPPORT:
+            raise ValidationError('Only support conversations can be assigned.')
+
+        agent_id = request.data.get('agent_id')
+        agent = get_object_or_404(User, pk=agent_id) if agent_id else request.user
+
+        conversation.assigned_agent = agent
+        conversation.save(update_fields=['assigned_agent', 'updated_at'])
+        return Response(ConversationSerializer(conversation, context={'request': request}).data)
 
     @action(detail=True, methods=['get', 'post'], url_path='messages')
     def messages(self, request, pk=None):

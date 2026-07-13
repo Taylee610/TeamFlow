@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'channels',
     'corsheaders',
     'chat',
+    'notifications',
+    'ai_assistant',
 ]
 
 MIDDLEWARE = [
@@ -156,6 +158,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'user': '100/hour',
+        'ai': '20/hour',
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
@@ -165,4 +168,24 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+# --- Email ---
+# Defaults to printing emails to the console in dev. Point EMAIL_BACKEND /
+# EMAIL_HOST* at a real provider (SMTP, SendGrid, SES, etc.) via env vars to
+# send real mail -- no code changes needed.
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = config('EMAIL_HOST', default='')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='TeamFlow <noreply@teamflow.local>')
+
+# Used to build links back to the app in emails (task assigned, etc.).
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
+
+# --- AI features (Anthropic) ---
+# Left blank => AI endpoints return a graceful 503 instead of crashing.
+ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY', default='')
+ANTHROPIC_MODEL = config('ANTHROPIC_MODEL', default='claude-opus-4-8')
 

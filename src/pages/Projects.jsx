@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import api from '../api/axios'
 import Modal from '../components/Modal'
+import { useAuth } from '../context/AuthContext'
+import { canManageProject } from '../utils/permissions'
 
 export default function Projects() {
+  const { user } = useAuth()
   const [projects, setProjects] = useState(null)
   const [taskCounts, setTaskCounts] = useState({})
   const [showCreate, setShowCreate] = useState(false)
@@ -38,7 +41,7 @@ export default function Projects() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-900">Projects</h1>
+        <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Projects</h1>
         <button
           onClick={() => setShowCreate(true)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium"
@@ -48,59 +51,66 @@ export default function Projects() {
       </div>
 
       {projects === null ? (
-        <p className="text-sm text-slate-400">Loading projects...</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500">Loading projects...</p>
       ) : projects.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-dashed border-slate-300 rounded-xl">
-          <p className="text-slate-500 text-sm">No projects yet.</p>
+        <div className="text-center py-16 bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-xl">
+          <p className="text-slate-500 dark:text-slate-400 text-sm">No projects yet.</p>
           <button
             onClick={() => setShowCreate(true)}
-            className="mt-3 text-sm text-brand-600 font-medium hover:underline"
+            className="mt-3 text-sm text-brand-600 dark:text-brand-400 font-medium hover:underline"
           >
             Create your first project
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col hover:border-brand-300 transition-colors"
-            >
-              <Link
-                to={`/projects/${project.id}`}
-                className="font-semibold text-slate-900 hover:text-brand-600 truncate"
+          {projects.map((project) => {
+            const canManage = canManageProject(user, project)
+            return (
+              <div
+                key={project.id}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col hover:border-brand-300 dark:hover:border-brand-600 transition-colors"
               >
-                {project.name}
-              </Link>
-              <p className="text-sm text-slate-500 mt-1 flex-1 line-clamp-2">
-                {project.description || 'No description yet.'}
-              </p>
-              <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-                <span>{taskCounts[project.id] || 0} task{taskCounts[project.id] === 1 ? '' : 's'}</span>
-                <span>{new Date(project.created_at).toLocaleDateString()}</span>
-              </div>
-              <div className="mt-4 flex items-center gap-2 pt-4 border-t border-slate-100">
                 <Link
                   to={`/projects/${project.id}`}
-                  className="flex-1 text-center text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200"
+                  className="font-semibold text-slate-900 dark:text-slate-100 hover:text-brand-600 dark:hover:text-brand-400 truncate"
                 >
-                  Open
+                  {project.name}
                 </Link>
-                <button
-                  onClick={() => setEditing(project)}
-                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(project.id)}
-                  className="text-xs font-medium px-3 py-1.5 rounded-lg text-red-600 hover:bg-red-50"
-                >
-                  Delete
-                </button>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 flex-1 line-clamp-2">
+                  {project.description || 'No description yet.'}
+                </p>
+                <div className="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span>{taskCounts[project.id] || 0} task{taskCounts[project.id] === 1 ? '' : 's'}</span>
+                  <span>{new Date(project.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="mt-4 flex items-center gap-2 pt-4 border-t border-slate-100 dark:border-slate-700">
+                  <Link
+                    to={`/projects/${project.id}`}
+                    className="flex-1 text-center text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 transition-colors"
+                  >
+                    Open
+                  </Link>
+                  {canManage && (
+                    <button
+                      onClick={() => setEditing(project)}
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 transition-colors"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {canManage && (
+                    <button
+                      onClick={() => handleDelete(project.id)}
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -155,28 +165,28 @@ function ProjectFormModal({ project, onClose, onSaved }) {
     <Modal title={project ? 'Edit Project' : 'New Project'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Name</label>
           <input
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:focus:ring-brand-400"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
           <textarea
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:focus:ring-brand-400"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
           >
             Cancel
           </button>

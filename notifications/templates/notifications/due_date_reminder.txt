@@ -1,0 +1,11 @@
+Hi {{ assignee_name }},
+
+This is a reminder that a task in {{ project_name }} is due soon:
+
+  {{ task_title }}
+
+Due: {{ due_date }}
+
+View it here: {{ task_url }}
+
+-- TeamFlow

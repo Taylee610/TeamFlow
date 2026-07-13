@@ -25,16 +25,23 @@ class Task(models.Model):
     IN_PROGRESS = 'in_progress'
     DONE = 'done'
     STATUS_CHOICES = [(TODO,'todo'), (IN_PROGRESS,'in_progress'), (DONE,'done')]
-    
+
+    LOW = 'low'
+    MEDIUM = 'medium'
+    HIGH = 'high'
+    PRIORITY_CHOICES = [(LOW, 'low'), (MEDIUM, 'medium'), (HIGH, 'high')]
+
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=TODO)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default=MEDIUM)
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tasks')
     due_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     attachment = models.FileField(upload_to='task_files/', blank=True, null=True)
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ('status','due_date','title')

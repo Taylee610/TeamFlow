@@ -1,11 +1,7 @@
 from rest_framework import serializers
 from .models import Project, Task
 from accounts.models import User
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id','email','first_name','last_name']
+from accounts.serializers import UserSerializer
 
 class ProjectSerializer(serializers.ModelSerializer):
     owner = UserSerializer(read_only=True)
@@ -32,4 +28,4 @@ class TaskSerializer(serializers.ModelSerializer):
 
     class Meta:
              model = Task
-             fields = ['id','project','title','description','status','due_date','assigned_to','updated_at','attachment']
+             fields = ['id','project','title','description','status','priority','due_date','assigned_to','updated_at','attachment']

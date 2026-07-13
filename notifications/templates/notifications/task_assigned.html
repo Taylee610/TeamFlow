@@ -1,0 +1,7 @@
+<div style="font-family: sans-serif; color: #1e293b;">
+  <p>Hi {{ assignee_name }},</p>
+  <p><strong>{{ assigner_name }}</strong> assigned you a task in <strong>{{ project_name }}</strong>:</p>
+  <p style="font-size: 16px; font-weight: 600; margin: 16px 0;">{{ task_title }}</p>
+  {% if due_date %}<p>Due: {{ due_date }}</p>{% endif %}
+  <p><a href="{{ task_url }}" style="color: #4f46e5;">View task in TeamFlow</a></p>
+</div>

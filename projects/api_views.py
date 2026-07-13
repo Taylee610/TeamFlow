@@ -13,14 +13,19 @@ from channels.layers import get_channel_layer
 
 from .models import Project, Task
 from .serializers import ProjectSerializer, TaskSerializer, AddMemberSerializer
-from .permissions import IsAssigneeOrProjectOwnerOrReadOnly
+from .permissions import IsAssigneeOrProjectOwnerOrReadOnly, IsProjectManagerOrReadOnly
+from accounts.permissions import can_manage_project
+from notifications.emails import send_task_assigned_email
+from notifications.services import send_async
 
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProjectManagerOrReadOnly]
 
     def get_queryset(self):
         user = self.request.user
+        if user.is_admin:
+            return Project.objects.all()
         return Project.objects.filter(Q(owner=user) | Q(members=user)).distinct()
 
     def perform_create(self, serializer):
@@ -29,8 +34,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='members')
     def add_member(self, request, pk=None):
         project = self.get_object()
-        if project.owner != request.user:
-            raise PermissionDenied('Only the project owner can add members.')
+        if not can_manage_project(request.user, project):
+            raise PermissionDenied('You do not have permission to add members to this project.')
 
         serializer = AddMemberSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -45,8 +50,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['delete'], url_path=r'members/(?P<user_id>\d+)')
     def remove_member(self, request, pk=None, user_id=None):
         project = self.get_object()
-        if project.owner != request.user:
-            raise PermissionDenied('Only the project owner can remove members.')
+        if not can_manage_project(request.user, project):
+            raise PermissionDenied('You do not have permission to remove members from this project.')
 
         project.members.remove(user_id)
         return Response(ProjectSerializer(project).data, status=status.HTTP_200_OK)
@@ -62,6 +67,8 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        if user.is_admin:
+            return Task.objects.all()
         qs_owner = Task.objects.filter(project__owner=user)
         qs_member = Task.objects.filter(project__members=user)
         qs_assigned = Task.objects.filter(assigned_to=user)
@@ -72,18 +79,23 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         is_owner = project.owner == self.request.user
         is_member = project.members.filter(pk=self.request.user.pk).exists()
-        if not (is_owner or is_member):
+        if not (is_owner or is_member or self.request.user.is_admin):
             raise PermissionDenied('You may only create tasks in projects you belong to.')
         task = serializer.save()
         self._notify_task_update(task)
+        if task.assigned_to_id:
+            send_async(send_task_assigned_email, task, assigned_by=self.request.user)
 
     def perform_update(self, serializer):
+        previous_assignee_id = serializer.instance.assigned_to_id
         task = serializer.save()
         self._notify_task_update(task)
+        if task.assigned_to_id and task.assigned_to_id != previous_assignee_id:
+            send_async(send_task_assigned_email, task, assigned_by=self.request.user)
 
     def perform_destroy(self, instance):
-        if instance.project.owner != self.request.user:
-            raise PermissionDenied("Only project owner can delete tasks.")
+        if not can_manage_project(self.request.user, instance.project):
+            raise PermissionDenied("You do not have permission to delete tasks in this project.")
         instance.delete()
 
     def _notify_task_update(self, task):

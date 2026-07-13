@@ -25,9 +25,15 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    class Role(models.TextChoices):
+        ADMIN = 'admin', 'Admin'
+        MANAGER = 'manager', 'Manager'
+        MEMBER = 'member', 'Member'
+
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
+    role = models.CharField(max_length=10, choices=Role.choices, default=Role.MEMBER)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -36,6 +42,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = []
 
     objects = UserManager()
-    
+
     def __str__(self):
         return self.email
+
+    @property
+    def is_admin(self):
+        return self.role == self.Role.ADMIN
+
+    @property
+    def is_manager_or_admin(self):
+        return self.role in (self.Role.ADMIN, self.Role.MANAGER)

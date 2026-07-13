@@ -11,4 +11,4 @@ channels
 channels-redis
 daphne
 django-cors-headers
-anthropic
+anthropic==0.116.0

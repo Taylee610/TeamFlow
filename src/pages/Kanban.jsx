@@ -8,6 +8,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
+import LoadingState from '../components/LoadingState'
 
 const COLUMNS = [
   { key: 'todo', label: 'To Do' },
@@ -61,17 +62,17 @@ export default function Kanban() {
   }
 
   if (!project || !tasks) {
-    return <div className="p-6 text-sm text-slate-400">Loading board...</div>
+    return <LoadingState label="Loading board..." />
   }
 
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <Link to={`/projects/${id}`} className="text-xs text-brand-600 hover:underline">
+          <Link to={`/projects/${id}`} className="text-xs text-brand-600 dark:text-brand-400 hover:underline">
             &larr; Back to {project.name}
           </Link>
-          <h1 className="text-lg font-semibold text-slate-900 mt-1">{project.name} · Kanban</h1>
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mt-1">{project.name} · Kanban</h1>
         </div>
       </div>
 
@@ -109,12 +110,14 @@ function Column({ id, label, tasks, currentUserId, people }) {
     <div
       ref={setNodeRef}
       className={`rounded-xl border flex flex-col min-h-[65vh] transition-colors ${
-        isOver ? 'bg-brand-50 border-brand-300' : 'bg-slate-100/60 border-slate-200'
+        isOver
+          ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-300 dark:border-brand-700'
+          : 'bg-slate-100/60 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
       }`}
     >
-      <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-800">{label}</h3>
-        <span className="text-xs font-medium text-slate-500 bg-white rounded-full px-2 py-0.5">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{label}</h3>
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-700 rounded-full px-2 py-0.5">
           {tasks.length}
         </span>
       </div>
@@ -148,18 +151,18 @@ function Card({ task, currentUserId, people, overlay }) {
 
   return (
     <div
-      className={`bg-white border border-slate-200 rounded-lg p-3 shadow-sm cursor-grab active:cursor-grabbing select-none ${
+      className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 shadow-sm cursor-grab active:cursor-grabbing select-none ${
         overlay ? 'shadow-lg rotate-2' : ''
       }`}
     >
-      <p className="text-sm font-medium text-slate-800 leading-snug">{task.title}</p>
+      <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug">{task.title}</p>
       <div className="mt-2 flex items-center justify-between text-xs">
-        <span className={overdue ? 'text-red-500 font-medium' : 'text-slate-400'}>
+        <span className={overdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-slate-400 dark:text-slate-500'}>
           {task.due_date ? new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'No due date'}
         </span>
         {assignee && (
           <span
-            className="h-5 w-5 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-[10px] font-semibold"
+            className="h-5 w-5 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 flex items-center justify-center text-[10px] font-semibold"
             title={task.assigned_to === currentUserId ? 'You' : (assignee.first_name || assignee.email)}
           >
             {(assignee.first_name || assignee.email || '?').slice(0, 1).toUpperCase()}

@@ -1,23 +1,21 @@
 import { NavLink } from 'react-router-dom'
 import {
   Plus, Search, FolderKanban, Globe2, BarChart3,
-  Users, MessageSquare, Settings, HelpCircle,
+  Users, MessageSquare, Settings, HelpCircle, Sun, Moon,
 } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
 
 // Icons that go to a real route in the app today.
 const primaryItems = [
+  { to: '/everything', label: 'Everything', icon: Globe2 },
   { to: '/projects', label: 'Projects', icon: FolderKanban },
+  { to: '/people', label: 'People', icon: Users },
   { to: '/chat', label: 'Chat', icon: MessageSquare },
   { to: '/dashboard', label: 'Reports', icon: BarChart3 },
 ]
-
-// Icons that don't have a page yet — shown so the rail reads complete,
-// but they don't navigate anywhere until those features exist.
-const stubItems = [
-  { label: 'Everything', icon: Globe2 },
-  { label: 'People', icon: Users },
-]
 export default function IconRail({ onCreateClick, onSearchClick }) {
+  const { theme, toggleTheme } = useTheme()
+
   return (
     <div className="w-16 shrink-0 bg-slate-900 flex flex-col items-center py-4">
       <button
@@ -53,21 +51,18 @@ export default function IconRail({ onCreateClick, onSearchClick }) {
             <Icon size={20} />
           </NavLink>
         ))}
-
-        {stubItems.map(({ label, icon: Icon }) => (
-          <button
-            key={label}
-            title={`${label} — coming soon`}
-            className="h-10 w-10 rounded-xl text-slate-600 flex items-center justify-center cursor-not-allowed"
-          >
-            <Icon size={20} />
-          </button>
-        ))}
       </div>
 
       <button
+        onClick={toggleTheme}
+        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        className="h-10 w-10 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors"
+      >
+        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+      </button>
+      <button
         title="Settings — coming soon"
-        className="h-10 w-10 rounded-xl text-slate-600 flex items-center justify-center cursor-not-allowed"
+        className="mt-1 h-10 w-10 rounded-xl text-slate-600 flex items-center justify-center cursor-not-allowed"
       >
         <Settings size={20} />
       </button>
