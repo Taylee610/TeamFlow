@@ -218,3 +218,5 @@ tenant_map.py
 node_modules/
 dist/
 teamtaskdb
+.env.example
+teamtaskdb.sqlite3

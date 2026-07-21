@@ -156,7 +156,7 @@ export default function ProjectDetail() {
                   return (
                     <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                       <td className="px-5 py-3">
-                        <span className="font-medium text-slate-800 dark:text-slate-200">{task.title}</span>
+                        <Link to={`/projects/${project.id}/tasks/${task.id}`} className="font-medium text-slate-800 hover:text-brand-600 dark:text-slate-200">{task.title}</Link>
                         {overdue && (
                           <span className="ml-2 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300">
                             Overdue

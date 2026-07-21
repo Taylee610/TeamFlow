@@ -47,6 +47,9 @@ INSTALLED_APPS = [
     'chat',
     'notifications',
     'ai_assistant',
+    'erp_foundation',
+    'accounting',
+    'erp_operations',
 ]
 
 MIDDLEWARE = [

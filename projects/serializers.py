@@ -28,4 +28,14 @@ class TaskSerializer(serializers.ModelSerializer):
 
     class Meta:
              model = Task
-             fields = ['id','project','title','description','status','priority','due_date','assigned_to','updated_at','attachment']
+             fields = ['id','project','title','description','status','priority','due_date','assigned_to','updated_at','attachment','parent','linked_tasks','labels','story_points']
+
+    def validate(self, attrs):
+        project = attrs.get('project') or getattr(self.instance, 'project', None)
+        parent = attrs.get('parent')
+        linked = attrs.get('linked_tasks', [])
+        if parent and project and parent.project_id != project.id:
+            raise serializers.ValidationError({'parent': 'A child task must belong to the same project.'})
+        if project and any(task.project_id != project.id for task in linked):
+            raise serializers.ValidationError({'linked_tasks': 'Linked tasks must belong to the same project.'})
+        return attrs

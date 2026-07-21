@@ -29,3 +29,12 @@ class UserRoleTests(APITestCase):
         response = self.client.get('/api/auth/me/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['role'], 'manager')
+
+    def test_profile_can_be_updated_without_escalating_role(self):
+        user = User.objects.create_user(email='profile@example.com', password='pass123', role=User.Role.MEMBER)
+        self.client.force_authenticate(user)
+        response = self.client.patch('/api/auth/me/', {'first_name': 'Taylee', 'role': 'admin'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user.refresh_from_db()
+        self.assertEqual(user.first_name, 'Taylee')
+        self.assertEqual(user.role, User.Role.MEMBER)

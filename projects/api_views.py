@@ -31,6 +31,21 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
+    @action(detail=True, methods=['get'], url_path='board')
+    def board(self, request, pk=None):
+        """Return board metadata and tasks in one request to avoid the
+        duplicated project/task round trips used by the Kanban screen."""
+        project = self.get_object()
+        tasks = project.tasks.select_related('assigned_to', 'parent').prefetch_related('linked_tasks').only(
+            'id', 'project_id', 'title', 'description', 'status', 'priority',
+            'due_date', 'assigned_to_id', 'updated_at', 'attachment', 'parent_id',
+            'labels', 'story_points',
+        ).order_by('status', 'due_date', 'title')
+        return Response({
+            'project': ProjectSerializer(project).data,
+            'tasks': TaskSerializer(tasks, many=True).data,
+        })
+
     @action(detail=True, methods=['post'], url_path='members')
     def add_member(self, request, pk=None):
         project = self.get_object()

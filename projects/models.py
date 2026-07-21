@@ -23,8 +23,16 @@ class Project(models.Model):
 class Task(models.Model):
     TODO = 'todo'
     IN_PROGRESS = 'in_progress'
+    DRAFTING = 'drafting'
+    IN_REVIEW = 'in_review'
     DONE = 'done'
-    STATUS_CHOICES = [(TODO,'todo'), (IN_PROGRESS,'in_progress'), (DONE,'done')]
+    STATUS_CHOICES = [
+        (TODO, 'To do'),
+        (DRAFTING, 'Drafting'),
+        (IN_REVIEW, 'In review'),
+        (DONE, 'Done'),
+        (IN_PROGRESS, 'In progress (legacy)'),
+    ]
 
     LOW = 'low'
     MEDIUM = 'medium'
@@ -42,6 +50,10 @@ class Task(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     attachment = models.FileField(upload_to='task_files/', blank=True, null=True)
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='child_tasks')
+    linked_tasks = models.ManyToManyField('self', symmetrical=True, blank=True)
+    labels = models.JSONField(default=list, blank=True)
+    story_points = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ('status','due_date','title')

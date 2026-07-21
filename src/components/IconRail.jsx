@@ -1,12 +1,14 @@
 import { NavLink } from 'react-router-dom'
 import {
   Plus, Search, FolderKanban, Globe2, BarChart3,
-  Users, MessageSquare, Settings, HelpCircle, Sun, Moon,
+  Users, MessageSquare, Settings, HelpCircle, Sun, Moon, Landmark, Bot,
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
 // Icons that go to a real route in the app today.
 const primaryItems = [
+  { to: '/erp', label: 'ERP Finance', icon: Landmark },
+  { to: '/ai', label: 'Taylee AI', icon: Bot },
   { to: '/everything', label: 'Everything', icon: Globe2 },
   { to: '/projects', label: 'Projects', icon: FolderKanban },
   { to: '/people', label: 'People', icon: Users },
@@ -60,18 +62,12 @@ export default function IconRail({ onCreateClick, onSearchClick }) {
       >
         {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
       </button>
-      <button
-        title="Settings — coming soon"
-        className="mt-1 h-10 w-10 rounded-xl text-slate-600 flex items-center justify-center cursor-not-allowed"
-      >
+      <NavLink to="/settings" title="Settings" className="mt-1 h-10 w-10 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">
         <Settings size={20} />
-      </button>
-      <button
-        title="Help — coming soon"
-        className="mt-1 h-10 w-10 rounded-xl text-slate-600 flex items-center justify-center cursor-not-allowed"
-      >
+      </NavLink>
+      <NavLink to="/help" title="Help" className="mt-1 h-10 w-10 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center">
         <HelpCircle size={20} />
-      </button>
+      </NavLink>
     </div>
   )
 }

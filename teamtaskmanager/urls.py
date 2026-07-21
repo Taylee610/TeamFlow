@@ -20,6 +20,7 @@ urlpatterns = [
     path('api/chat/', include('chat.api_urls')),
     path('api/auth/', include('accounts.api_urls')),
     path('api/ai/', include('ai_assistant.urls')),
+    path('api/v1/erp/', include('accounting.api_urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
