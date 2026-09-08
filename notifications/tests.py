@@ -11,6 +11,8 @@ from rest_framework import status
 
 from projects.models import Project, Task
 from .emails import send_task_assigned_email, send_due_date_reminder_email
+from erp_foundation.services import create_workspace
+from erp_foundation.testing import add_member
 
 User = get_user_model()
 
@@ -75,7 +77,10 @@ class TaskAssignmentTriggersEmailTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(email='owner@example.com', password='pass123')
         self.assignee = User.objects.create_user(email='assignee@example.com', password='pass123')
-        self.project = Project.objects.create(name='Proj1', owner=self.owner)
+        self.tenant = create_workspace(self.owner, 'Team')
+        add_member(self.tenant, self.assignee)
+        self.project = Project.objects.create(name='Proj1', owner=self.owner, tenant=self.tenant)
+        self.project.members.add(self.assignee)
         self.client.force_authenticate(self.owner)
 
     @patch('projects.api_views.send_async')
@@ -98,6 +103,8 @@ class TaskAssignmentTriggersEmailTests(APITestCase):
     @patch('projects.api_views.send_async')
     def test_reassignment_sends_email(self, mock_send_async):
         other = User.objects.create_user(email='other@example.com', password='pass123')
+        add_member(self.tenant, other)
+        self.project.members.add(other)
         task = Task.objects.create(project=self.project, title='Task1', assigned_to=self.assignee)
         response = self.client.patch(f'/api/tasks/{task.id}/', {'assigned_to': other.id})
         self.assertEqual(response.status_code, status.HTTP_200_OK)

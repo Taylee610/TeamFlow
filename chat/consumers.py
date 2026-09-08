@@ -4,6 +4,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 
 from .models import Conversation
+from .permissions import can_access_conversation
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -35,6 +36,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive(self, text_data):
+        if not await self._user_can_access(self.scope.get('user')):
+            await self.close(code=4003)
+            return
         try:
             data = json.loads(text_data)
         except (TypeError, ValueError):
@@ -55,12 +59,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def chat_message(self, event):
         """Fired by the REST view (ConversationViewSet.messages) after a
         new message is saved."""
+        if not await self._user_can_access(self.scope.get('user')):
+            await self.close(code=4003)
+            return
         await self.send(text_data=json.dumps({
             'kind': 'message',
             'message': event['message'],
         }))
 
     async def typing_indicator(self, event):
+        if not await self._user_can_access(self.scope.get('user')):
+            await self.close(code=4003)
+            return
         if event['user_id'] == self.scope['user'].id:
             return  # don't echo back to the sender
         await self.send(text_data=json.dumps({
@@ -74,6 +84,4 @@ class ChatConsumer(AsyncWebsocketConsumer):
         conversation = Conversation.objects.filter(pk=self.conversation_id).first()
         if conversation is None:
             return False
-        if conversation.type == Conversation.SUPPORT:
-            return True
-        return conversation.participants.filter(user=user).exists()
+        return can_access_conversation(user, conversation)

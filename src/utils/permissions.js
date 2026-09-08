@@ -3,10 +3,5 @@
 // for deciding which buttons to show.
 export function canManageProject(user, project) {
   if (!user || !project) return false
-  if (project.owner?.id === user.id) return true
-  if (user.role === 'admin') return true
-  if (user.role === 'manager') {
-    return (project.members || []).some((m) => m.id === user.id)
-  }
-  return false
+  return project.can_manage === true
 }

@@ -11,6 +11,8 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from projects.models import Project, Task
+from accounts.permissions import can_view_project
+from erp_foundation.access import workspace_membership
 from .client import get_client
 from .serializers import TaskAssistRequestSerializer
 
@@ -32,11 +34,7 @@ TASK_ASSIST_SCHEMA = {
 
 
 def _can_view_project(user, project):
-    return (
-        project.owner_id == user.id
-        or project.members.filter(pk=user.pk).exists()
-        or user.is_admin
-    )
+    return can_view_project(user, project)
 
 
 class TaskAssistView(APIView):
@@ -54,7 +52,7 @@ class TaskAssistView(APIView):
         prompt = serializer.validated_data['prompt']
         project = serializer.validated_data.get('project')
 
-        if project and not _can_view_project(request.user, project):
+        if project and (project.tenant_id != workspace_membership(request).tenant_id or not _can_view_project(request.user, project)):
             raise PermissionDenied('You do not have access to that project.')
 
         existing_titles = []
@@ -103,7 +101,7 @@ class ProjectSummaryView(APIView):
             return Response({'detail': 'AI features are not set up yet.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         project = get_object_or_404(Project, pk=project_id)
-        if not _can_view_project(request.user, project):
+        if project.tenant_id != workspace_membership(request).tenant_id or not _can_view_project(request.user, project):
             raise PermissionDenied('You do not have access to that project.')
 
         tasks = project.tasks.all()

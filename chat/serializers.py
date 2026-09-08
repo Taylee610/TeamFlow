@@ -25,6 +25,12 @@ class MessageSerializer(serializers.ModelSerializer):
     sender_contact = ContactSerializer(read_only=True)
     reactions = MessageReactionSerializer(many=True, read_only=True)
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.attachment:
+            data['attachment'] = f'/files/messages/{instance.pk}/'
+        return data
+
     class Meta:
         model = Message
         fields = [
@@ -44,6 +50,10 @@ class MessageCreateSerializer(serializers.ModelSerializer):
         fields = ['body', 'attachment', 'parent']
 
     def validate(self, attrs):
+        parent = attrs.get('parent')
+        conversation = self.context.get('conversation')
+        if parent and (not conversation or parent.conversation_id != conversation.pk):
+            raise serializers.ValidationError({'parent': 'Replies must belong to this conversation.'})
         if not attrs.get('body') and not attrs.get('attachment'):
             raise serializers.ValidationError('A message needs text or an attachment.')
         return attrs
@@ -73,6 +83,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             'contact', 'assigned_agent', 'status', 'participants',
             'last_message', 'unread_count', 'created_at', 'updated_at',
         ]
+        read_only_fields = ['type', 'project']
 
     def get_last_message(self, obj):
         msg = obj.messages.order_by('-created_at').first()

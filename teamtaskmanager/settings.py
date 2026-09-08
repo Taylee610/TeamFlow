@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from decouple import config
 from datetime import timedelta
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -92,6 +93,8 @@ CHANNEL_LAYERS = {
         },
     },
 }
+if DEBUG and config('USE_IN_MEMORY_CHANNEL_LAYER', default=False, cast=bool):
+    CHANNEL_LAYERS = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}
 
 USE_POSTGRESQL = config('USE_POSTGRESQL', default=True, cast=bool)
 
@@ -140,6 +143,7 @@ if DEBUG:
         r'^http://127\.0\.0\.1:\d+$',
     ]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = (*default_headers, 'x-workspace-id')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

@@ -15,7 +15,7 @@ export default function Login() {
     setSubmitting(true)
     try {
       await login(email, password)
-      navigate('/dashboard')
+      navigate(sessionStorage.getItem('workspace_invite') ? '/workspaces' : '/dashboard')
     } catch (err) {
       toast.error('Invalid email or password.')
     } finally {

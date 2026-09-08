@@ -3,11 +3,11 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import IconRail from './IconRail'
 import { NavLink } from 'react-router-dom'
-import { BarChart3, BookOpen, FileText, Landmark, Package, Scale } from 'lucide-react'
+import { BarChart3, BookOpen, FileText, Landmark, Package, Scale, FolderKanban, Users } from 'lucide-react'
 import WorkspaceActions from './WorkspaceActions'
 
 export default function Layout() {
-  const { user, logout } = useAuth()
+  const { user, logout, workspace } = useAuth()
   const [workspaceAction, setWorkspaceAction] = useState(null)
 
   return (
@@ -22,7 +22,7 @@ export default function Layout() {
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold">
             T
           </div>
-          <span className="font-bold text-lg tracking-tight text-slate-900 dark:text-slate-100">Taylee ERP</span>
+          <NavLink to="/workspaces" className="font-bold text-lg tracking-tight text-slate-900 dark:text-slate-100 truncate" title="Manage or switch workspace">{workspace?.name || 'TeamFlow'}</NavLink>
         </div>
 
         {/* Workspace/project context panel -- filled in during the board-header
@@ -32,6 +32,9 @@ export default function Layout() {
             Workspace
           </p>
           {[
+            ['/dashboard', 'Dashboard', BarChart3],
+            ['/projects', 'Projects', FolderKanban],
+            ['/workspaces', 'Workspace & invitations', Users],
             ['/erp', 'Finance overview', Landmark],
             ['/erp?view=accounts', 'Chart of accounts', BookOpen],
             ['/erp?view=journals', 'Journal entries', FileText],

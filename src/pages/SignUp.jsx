@@ -18,7 +18,7 @@ export default function Signup() {
     setSubmitting(true)
     try {
       await signup(form)
-      navigate('/dashboard')
+      navigate('/workspaces')
     } catch (err) {
       const data = err.response?.data
       const message = data ? Object.values(data).flat().join(' ') : 'Signup failed.'

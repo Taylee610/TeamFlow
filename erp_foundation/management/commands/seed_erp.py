@@ -46,6 +46,7 @@ class Command(BaseCommand):
             users[email] = user
 
         permission_specs = {
+            "workspace.manage": ("workspace", {}),
             "erp.view": ("platform", {}), "accounting.post": ("accounting", {}),
             "accounting.approve": ("accounting", {"maximum_amount": 10000}),
             "procurement.approve": ("procurement", {"maximum_amount": 5000}), "payroll.run": ("payroll", {}),
@@ -115,7 +116,7 @@ class Command(BaseCommand):
         payroll, _ = PayrollRun.objects.update_or_create(company=company, period_start=date(2026, 7, 1), period_end=date(2026, 7, 31), defaults={"status": "draft"})
         Payslip.objects.update_or_create(payroll_run=payroll, employee=employee, defaults={"gross": Decimal("2500"), "tax": Decimal("425"), "deductions": Decimal("75"), "net": Decimal("2000"), "tax_engine_result": {"engine": "demo", "jurisdiction": "ZW"}})
 
-        project, _ = Project.objects.update_or_create(owner=users["taylee@me.com"], name="ERP Rollout", defaults={"description": "Demo implementation project connecting operations to accounting."})
+        project, _ = Project.objects.update_or_create(owner=users["taylee@me.com"], name="ERP Rollout", defaults={"tenant": tenant, "description": "Demo implementation project connecting operations to accounting."})
         project.members.set(users.values())
         task, _ = Task.objects.update_or_create(project=project, title="Configure chart of accounts", defaults={"description": "Review and approve the seeded account structure.", "status": Task.IN_PROGRESS, "priority": Task.HIGH, "assigned_to": users["finance@taylee.me"], "due_date": timezone.now() + timedelta(days=7)})
         Milestone.objects.update_or_create(project=project, name="Finance go-live", defaults={"due_date": date(2026, 8, 31)})

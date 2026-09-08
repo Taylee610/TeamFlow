@@ -6,6 +6,10 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db import transaction
+from erp_foundation.access import workspace_membership, can_admin_workspace, active_memberships
+from accounts.permissions import can_view_project
+from rest_framework.exceptions import PermissionDenied
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
@@ -30,22 +34,37 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Channels/DMs you're a participant of, plus every support
-        # conversation (any authenticated user can pick those up for now).
-        return Conversation.objects.filter(
-            Q(participants__user=user) | Q(type=Conversation.SUPPORT)
+        membership = workspace_membership(self.request)
+        support = Q(type=Conversation.SUPPORT)
+        if not can_admin_workspace(membership):
+            support &= Q(assigned_agent=user)
+        return Conversation.objects.filter(tenant=membership.tenant).filter(
+            (Q(participants__user=user) & ~Q(type=Conversation.SUPPORT)) | support
         ).distinct()
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         serializer = ConversationCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         user = request.user
+        membership = workspace_membership(request)
+        member_ids = set(data.get('member_ids', []))
+        valid_ids = set(User.objects.filter(
+            id__in=member_ids, is_active=True, tenant_memberships__tenant=membership.tenant,
+            tenant_memberships__is_active=True, tenant_memberships__role__tenant=membership.tenant,
+        ).values_list('id', flat=True))
+        if valid_ids != member_ids:
+            raise ValidationError({'member_ids': 'Choose active members of this workspace.'})
+        project = data.get('project')
+        if project and (project.tenant_id != membership.tenant_id or not can_view_project(user, project)):
+            raise ValidationError({'project': 'Project is not available in this workspace.'})
 
         if data['type'] == Conversation.CHANNEL:
             if not data.get('name'):
                 raise ValidationError({'name': 'A channel needs a name.'})
             conversation = Conversation.objects.create(
+                tenant=membership.tenant,
                 type=Conversation.CHANNEL,
                 name=data['name'],
                 project=data.get('project'),
@@ -64,11 +83,11 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 raise ValidationError({'member_ids': "You can't start a DM with yourself."})
 
             existing = (
-                Conversation.objects.filter(type=Conversation.DM, participants__user=user)
+                Conversation.objects.filter(tenant=membership.tenant, type=Conversation.DM, participants__user=user)
                 .filter(participants__user_id=other_id)
                 .first()
             )
-            conversation = existing or Conversation.objects.create(type=Conversation.DM)
+            conversation = existing or Conversation.objects.create(tenant=membership.tenant, type=Conversation.DM)
             if not existing:
                 ConversationParticipant.objects.create(conversation=conversation, user=user)
                 ConversationParticipant.objects.create(conversation=conversation, user_id=other_id)
@@ -104,9 +123,13 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation = self.get_object()
         if conversation.type != Conversation.SUPPORT:
             raise ValidationError('Only support conversations can be assigned.')
+        if not can_admin_workspace(workspace_membership(request)):
+            raise PermissionDenied('Only workspace administrators can assign support conversations.')
 
         agent_id = request.data.get('agent_id')
         agent = get_object_or_404(User, pk=agent_id) if agent_id else request.user
+        if not active_memberships(agent).filter(tenant_id=conversation.tenant_id).exists():
+            raise ValidationError({'agent_id': 'Choose an active member of this workspace.'})
 
         conversation.assigned_agent = agent
         conversation.save(update_fields=['assigned_agent', 'updated_at'])
@@ -124,7 +147,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 return self.get_paginated_response(serializer.data)
             return Response(serializer.data)
 
-        serializer = MessageCreateSerializer(data=request.data)
+        serializer = MessageCreateSerializer(data=request.data, context={'conversation': conversation})
         serializer.is_valid(raise_exception=True)
         message = serializer.save(conversation=conversation, sender=request.user)
 

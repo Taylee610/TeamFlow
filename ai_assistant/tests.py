@@ -7,6 +7,8 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 
 from projects.models import Project, Task
+from erp_foundation.services import create_workspace
+from erp_foundation.testing import add_member
 
 User = get_user_model()
 
@@ -51,7 +53,9 @@ class ProjectSummaryViewTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(email='owner@example.com', password='pass123')
         self.outsider = User.objects.create_user(email='outsider@example.com', password='pass123')
-        self.project = Project.objects.create(name='Proj1', owner=self.owner)
+        tenant = create_workspace(self.owner, 'Team')
+        add_member(tenant, self.outsider)
+        self.project = Project.objects.create(name='Proj1', owner=self.owner, tenant=tenant)
         Task.objects.create(project=self.project, title='Task1')
 
     @patch('ai_assistant.views.get_client', return_value=None)

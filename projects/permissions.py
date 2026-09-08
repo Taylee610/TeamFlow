@@ -19,8 +19,7 @@ class IsAssigneeOrProjectOwnerOrReadOnly(permissions.BasePermission):
 
         if view.action in ('update', 'partial_update'):
             return (
-                obj.assigned_to == request.user
-                or obj.project.owner == request.user
+                can_manage_project(request.user, obj.project)
                 or obj.project.members.filter(pk=request.user.pk).exists()
             )
 

@@ -7,7 +7,8 @@ import { ThemeProvider } from './context/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import Login from './pages/Login'
-import Signup from './pages/Signup'
+import Signup from './pages/SignUp'
+import Workspaces from './pages/Workspaces'
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import Projects from './pages/Projects'
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/workspaces" element={<Workspaces />} />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>

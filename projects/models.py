@@ -3,6 +3,8 @@ from django.conf import settings
 from django.urls import reverse
 
 class Project(models.Model):
+    # Unmapped legacy records are quarantined from customer APIs.
+    tenant = models.ForeignKey('erp_foundation.Tenant', on_delete=models.PROTECT, null=True, blank=True, related_name='projects')
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='projects')

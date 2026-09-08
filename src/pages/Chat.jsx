@@ -7,6 +7,16 @@ import { getChatSocketUrl } from '../api/ws'
 import Modal from '../components/Modal'
 import LoadingState from '../components/LoadingState'
 
+async function downloadAttachment(path) {
+  try {
+    const { data } = await api.get(path, { responseType: 'blob' })
+    const url = URL.createObjectURL(data)
+    const link = document.createElement('a')
+    link.href = url; link.download = 'attachment'; link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch { toast.error('Could not download this attachment.') }
+}
+
 export default function Chat() {
   const { user } = useAuth()
   const [conversations, setConversations] = useState(null)
@@ -36,20 +46,11 @@ export default function Chat() {
 
   useEffect(loadConversations, [])
 
-  // Build a de-duped list of everyone you share a project with, for the
-  // "new channel" member-picker and "new DM" recipient-picker.
+  // Workspace membership is the boundary for channel and DM invitations.
   useEffect(() => {
-    api.get('/projects/?page_size=200').then(({ data }) => {
-      const projects = data.results ?? data
-      const byId = new Map()
-      projects.forEach((p) => {
-        if (p.owner && p.owner.id !== user?.id) byId.set(p.owner.id, p.owner)
-        ;(p.members || []).forEach((m) => {
-          if (m.id !== user?.id) byId.set(m.id, m)
-        })
-      })
-      setColleagues([...byId.values()])
-    })
+    api.get('/workspaces/members/').then(({ data }) => {
+      setColleagues(data.map(m => m.user).filter(person => person.id !== user?.id))
+    }).catch(() => toast.error('Could not load workspace members.'))
   }, [user])
 
   // Load history + open the socket whenever the active conversation changes.
@@ -303,14 +304,12 @@ function MessageList({ messages, currentUserId, search, wallpaper }) {
                 {!mine && <p className="mb-0.5 text-xs font-semibold text-brand-600 dark:text-brand-300">{senderName}</p>}
                 <span className={`whitespace-pre-wrap break-words ${search ? 'rounded bg-yellow-200/80 px-0.5 text-slate-900' : ''}`}>{m.body}</span>
                 {m.attachment && (
-                  <a
-                    href={m.attachment}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    onClick={() => downloadAttachment(m.attachment)}
                     className="mt-2 flex items-center gap-1 rounded-md bg-black/5 p-2 text-xs text-brand-600 underline dark:bg-white/5 dark:text-brand-300"
                   >
                     <Paperclip size={12} /> Attachment
-                  </a>
+                  </button>
                 )}<span className="ml-3 inline-flex translate-y-1 items-center gap-0.5 text-[10px] text-slate-500">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{mine && <CheckCheck size={14} className="text-sky-500" />}</span>
               </div>
             </div>

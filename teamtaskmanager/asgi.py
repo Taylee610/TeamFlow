@@ -11,13 +11,14 @@ import os
 
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
-import projects.routing
-import chat.routing
-from chat.middleware import JWTAuthMiddlewareStack
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'teamtaskmanager.settings')
 
 django_asgi_app = get_asgi_application()
+
+import projects.routing
+import chat.routing
+from chat.middleware import JWTAuthMiddlewareStack
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,

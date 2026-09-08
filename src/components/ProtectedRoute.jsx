@@ -1,8 +1,9 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function ProtectedRoute({ roles }) {
-  const { user, isAuthenticated, loading } = useAuth()
+  const { user, isAuthenticated, loading, workspace } = useAuth()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -13,8 +14,9 @@ export default function ProtectedRoute({ roles }) {
   }
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!workspace && location.pathname !== '/workspaces') return <Navigate to="/workspaces" replace />
 
-  if (roles && !roles.includes(user?.role)) {
+  if (roles && !roles.includes(workspace?.role)) {
     return <Navigate to="/dashboard" replace />
   }
 

@@ -20,6 +20,7 @@ class Contact(models.Model):
 
 
 class Conversation(models.Model):
+    tenant = models.ForeignKey('erp_foundation.Tenant', on_delete=models.PROTECT, null=True, blank=True, related_name='conversations')
     CHANNEL = 'channel'
     DM = 'dm'
     SUPPORT = 'support'

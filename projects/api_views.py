@@ -15,6 +15,7 @@ from .models import Project, Task
 from .serializers import ProjectSerializer, TaskSerializer, AddMemberSerializer
 from .permissions import IsAssigneeOrProjectOwnerOrReadOnly, IsProjectManagerOrReadOnly
 from accounts.permissions import can_manage_project
+from erp_foundation.access import workspace_membership, can_admin_workspace, active_memberships
 from notifications.emails import send_task_assigned_email
 from notifications.services import send_async
 
@@ -24,12 +25,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_admin:
-            return Project.objects.all()
-        return Project.objects.filter(Q(owner=user) | Q(members=user)).distinct()
+        membership = workspace_membership(self.request)
+        qs = Project.objects.filter(tenant=membership.tenant)
+        if can_admin_workspace(membership):
+            return qs
+        return qs.filter(Q(owner=user) | Q(members=user)).distinct()
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        serializer.save(owner=self.request.user, tenant=workspace_membership(self.request).tenant)
 
     @action(detail=True, methods=['get'], url_path='board')
     def board(self, request, pk=None):
@@ -42,7 +45,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             'labels', 'story_points',
         ).order_by('status', 'due_date', 'title')
         return Response({
-            'project': ProjectSerializer(project).data,
+            'project': ProjectSerializer(project, context={'request': request}).data,
             'tasks': TaskSerializer(tasks, many=True).data,
         })
 
@@ -55,12 +58,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer = AddMemberSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user_to_add = serializer.validated_data['email']
+        if not active_memberships(user_to_add).filter(tenant_id=project.tenant_id).exists():
+            raise PermissionDenied('Invite this person to the workspace before adding them to a project.')
 
         if user_to_add == project.owner:
             return Response({'detail': 'The owner is already on the project.'}, status=status.HTTP_400_BAD_REQUEST)
 
         project.members.add(user_to_add)
-        return Response(ProjectSerializer(project).data, status=status.HTTP_201_CREATED)
+        return Response(ProjectSerializer(project, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['delete'], url_path=r'members/(?P<user_id>\d+)')
     def remove_member(self, request, pk=None, user_id=None):
@@ -69,7 +74,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             raise PermissionDenied('You do not have permission to remove members from this project.')
 
         project.members.remove(user_id)
-        return Response(ProjectSerializer(project).data, status=status.HTTP_200_OK)
+        return Response(ProjectSerializer(project, context={'request': request}).data, status=status.HTTP_200_OK)
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -82,19 +87,19 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_admin:
-            return Task.objects.all()
-        qs_owner = Task.objects.filter(project__owner=user)
-        qs_member = Task.objects.filter(project__members=user)
-        qs_assigned = Task.objects.filter(assigned_to=user)
-        return (qs_owner | qs_member | qs_assigned).distinct()
+        membership = workspace_membership(self.request)
+        qs = Task.objects.filter(project__tenant=membership.tenant)
+        if can_admin_workspace(membership):
+            return qs
+        return qs.filter(Q(project__owner=user) | Q(project__members=user)).distinct()
 
     def perform_create(self, serializer):
         project = serializer.validated_data.get('project')
 
         is_owner = project.owner == self.request.user
         is_member = project.members.filter(pk=self.request.user.pk).exists()
-        if not (is_owner or is_member or self.request.user.is_admin):
+        membership = workspace_membership(self.request)
+        if project.tenant_id != membership.tenant_id or not (is_owner or is_member or can_admin_workspace(membership)):
             raise PermissionDenied('You may only create tasks in projects you belong to.')
         task = serializer.save()
         self._notify_task_update(task)
@@ -141,8 +146,11 @@ class DashboardStatsView(APIView):
 
     def get(self, request):
         user = request.user
-        projects = Project.objects.filter(owner=user)
-        tasks = (Task.objects.filter(project__owner=user) | Task.objects.filter(assigned_to=user)).distinct()
+        membership = workspace_membership(request)
+        projects = Project.objects.filter(tenant=membership.tenant)
+        if not can_admin_workspace(membership):
+            projects = projects.filter(Q(owner=user) | Q(members=user)).distinct()
+        tasks = Task.objects.filter(project__in=projects)
 
         now = timezone.now()
         week_ago = now - timedelta(days=7)

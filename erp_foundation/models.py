@@ -47,11 +47,24 @@ class Membership(models.Model):
             raise ValidationError("Role must belong to the membership tenant.")
 
     def has_permission(self, code, **context):
+        if not self.is_active or not self.tenant.is_active or self.role.tenant_id != self.tenant_id:
+            return False
         permission = self.role.permissions.filter(code=code).first()
         if not permission:
             return False
         maximum = permission.conditions.get("maximum_amount")
         return maximum is None or context.get("amount", 0) <= maximum
+
+
+class WorkspaceInvitation(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='invitations')
+    email = models.EmailField()
+    token_digest = models.CharField(max_length=64, unique=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class Currency(models.Model):

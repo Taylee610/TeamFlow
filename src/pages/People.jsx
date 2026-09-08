@@ -76,11 +76,6 @@ export default function People() {
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{person.email}</p>
                 </div>
-                {person.role && person.role !== 'member' && (
-                  <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full shrink-0 ${ROLE_STYLES[person.role]}`}>
-                    {person.role}
-                  </span>
-                )}
               </div>
 
               <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">

@@ -6,12 +6,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from erp_foundation.models import Membership
+from erp_foundation.access import workspace_membership
 from erp_operations.models import PurchaseOrder, SalesOrder, StockLevel
 from .models import Account, BankTransaction, FinancialDocument, JournalEntry, JournalEntryLine
 
 
 def membership_for(request):
-    return Membership.objects.select_related("tenant", "role").filter(user=request.user, is_active=True).first()
+    return workspace_membership(request)
 
 
 class TenantAPIView(APIView):
