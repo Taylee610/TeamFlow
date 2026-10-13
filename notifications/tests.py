@@ -47,7 +47,10 @@ class SendDueRemindersCommandTests(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user(email='owner@example.com', password='pass123')
         self.assignee = User.objects.create_user(email='assignee@example.com', password='pass123')
-        self.project = Project.objects.create(name='Proj1', owner=self.owner)
+        tenant = create_workspace(self.owner, 'Reminder team')
+        add_member(tenant, self.assignee)
+        self.project = Project.objects.create(name='Proj1', owner=self.owner, tenant=tenant)
+        self.project.members.add(self.assignee)
         self.task = Task.objects.create(
             project=self.project,
             title='Due soon task',
@@ -57,6 +60,8 @@ class SendDueRemindersCommandTests(TestCase):
 
     def test_sends_reminder_and_marks_sent(self):
         call_command('send_due_reminders')
+        self.assertEqual(len(mail.outbox), 0)
+        call_command('run_worker', once=True)
         self.assertEqual(len(mail.outbox), 1)
         self.task.refresh_from_db()
         self.assertIsNotNone(self.task.reminder_sent_at)
@@ -64,6 +69,7 @@ class SendDueRemindersCommandTests(TestCase):
     def test_does_not_resend(self):
         call_command('send_due_reminders')
         call_command('send_due_reminders')
+        call_command('run_worker', once=True)
         self.assertEqual(len(mail.outbox), 1)
 
     def test_ignores_tasks_outside_window(self):

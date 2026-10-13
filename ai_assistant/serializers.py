@@ -9,7 +9,7 @@ class TaskAssistRequestSerializer(serializers.Serializer):
 
 
 class TaskAssistResponseSerializer(serializers.Serializer):
-    description = serializers.CharField()
-    subtasks = serializers.ListField(child=serializers.CharField())
+    description = serializers.CharField(max_length=10000)
+    subtasks = serializers.ListField(child=serializers.CharField(max_length=100), max_length=20)
     priority = serializers.ChoiceField(choices=['low', 'medium', 'high'])
     due_date = serializers.CharField(allow_null=True)

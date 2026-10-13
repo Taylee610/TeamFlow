@@ -24,5 +24,5 @@ class SignupSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'role')
-        read_only_fields = ('role', 'email')
+        fields = ('id', 'email', 'first_name', 'last_name', 'role', 'email_verified')
+        read_only_fields = ('role', 'email', 'email_verified')

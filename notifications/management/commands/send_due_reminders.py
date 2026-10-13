@@ -4,6 +4,9 @@ from datetime import timedelta
 
 from projects.models import Task
 from notifications.emails import send_due_date_reminder_email
+from django.db import transaction
+from workspace_tools.services import enqueue
+from erp_foundation.access import active_memberships
 
 
 class Command(BaseCommand):
@@ -28,9 +31,15 @@ class Command(BaseCommand):
 
         sent = 0
         for task in due_soon:
-            send_due_date_reminder_email(task)
-            task.reminder_sent_at = now
-            task.save(update_fields=['reminder_sent_at'])
-            sent += 1
+            with transaction.atomic():
+                task = Task.objects.select_for_update().select_related('project', 'assigned_to').get(pk=task.pk)
+                if task.reminder_sent_at or task.status == Task.DONE or not task.assigned_to or not task.due_date or not now <= task.due_date <= window_end:
+                    continue
+                if not active_memberships(task.assigned_to).filter(tenant_id=task.project.tenant_id).exists():
+                    continue
+                enqueue('task_reminder', {'task': task.pk, 'assignee': task.assigned_to_id}, f'due-reminder:{task.pk}:{task.due_date.isoformat()}')
+                task.reminder_sent_at = now
+                task.save(update_fields=['reminder_sent_at'])
+                sent += 1
 
-        self.stdout.write(self.style.SUCCESS(f'Sent {sent} due-date reminder(s).'))
+        self.stdout.write(self.style.SUCCESS(f'Queued {sent} due-date reminder(s). Run the worker to deliver them.'))

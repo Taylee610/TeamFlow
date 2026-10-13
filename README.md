@@ -1,10 +1,14 @@
 # Team Task Manager Web Application
 
 A Django-based Team Task Manager that allows teams to create projects, manage tasks, and collaborate effectively.  
-The app provides both a **traditional web interface** and a REST API for external clients.  
+The React frontend uses a Django REST API, with workspace-scoped access and realtime updates.
 
 For the current business SaaS assessment, launch blockers, and delivery plan, see
 [SaaS readiness roadmap](docs/SAAS_READINESS.md).
+
+For the implemented workspace tools, finance workflows, Paynow/EcoCash/card billing,
+Gmail setup, worker startup and current limitations, see
+[Implemented tools](docs/IMPLEMENTED_TOOLS.md).
 
 For the updated Windows startup commands, workspace onboarding, and legacy data
 mapping instructions, see [Workspace setup](docs/WORKSPACE_SETUP.md).
@@ -20,12 +24,12 @@ Features
 - Dockerized for easy setup
 
 Tech stack
-- Backend: Django 5, Django REST Framework  
+- Backend: Django 5.2 LTS, Django REST Framework
 - Database: PostgreSQL  
 - Auth:JWT (SimpleJWT)  
 - Realtime: Django Channels + Redis  
 - Containerization:Docker, docker-compose  
-- Deployment Ready:Gunicorn + Nginx
+- ASGI: Daphne; frontend/reverse-proxy configuration: Nginx
 
 How to Run
  

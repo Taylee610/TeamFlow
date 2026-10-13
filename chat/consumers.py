@@ -81,6 +81,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _user_can_access(self, user):
+        from .middleware import resolve_user
+        user = resolve_user(self.scope.get('jwt_token'))
+        self.scope['user'] = user
         conversation = Conversation.objects.filter(pk=self.conversation_id).first()
         if conversation is None:
             return False

@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .serializers import SignupSerializer, UserSerializer
+from rest_framework.throttling import ScopedRateThrottle
 
 
 class SignupView(generics.CreateAPIView):
@@ -13,6 +14,15 @@ class SignupView(generics.CreateAPIView):
     """
     serializer_class = SignupSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'auth'
+
+    def perform_create(self, serializer):
+        from django.db import transaction
+        from .recovery import send_verification
+        with transaction.atomic():
+            user = serializer.save()
+            send_verification(user)
 
 
 class MeView(APIView):

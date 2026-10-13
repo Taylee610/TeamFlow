@@ -63,6 +63,8 @@ class TenantIsolationTests(TestCase):
         company_a = Company.objects.create(tenant=tenant_a, name="A", legal_name="A Ltd", base_currency=currency)
         company_b = Company.objects.create(tenant=tenant_b, name="B", legal_name="B Ltd", base_currency=currency)
         role = Role.objects.create(tenant=tenant_a, name="Viewer")
+        from erp_foundation.models import Permission
+        role.permissions.add(Permission.objects.create(tenant=tenant_a,code='finance.view',module='finance'))
         user = get_user_model().objects.create_user(email="isolation@test.demo", password="test-password")
         Membership.objects.create(tenant=tenant_a, user=user, role=role)
         Account.objects.create(tenant=tenant_a, company=company_a, code="A100", name="Visible", account_type="asset")
@@ -70,4 +72,58 @@ class TenantIsolationTests(TestCase):
         client = APIClient(); client.force_authenticate(user)
         response = client.get("/api/v1/erp/accounts/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual([row["code"] for row in response.json()], ["A100"])
+        self.assertEqual([row["code"] for row in response.json()['results']], ["A100"])
+
+
+class FinanceWorkflowTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from rest_framework.test import APIClient
+        from erp_foundation.services import create_workspace
+        self.user=get_user_model().objects.create_user(email='finance@example.com',password='pass')
+        self.tenant=create_workspace(self.user,'Finance')
+        self.client=APIClient();self.client.force_authenticate(self.user)
+        self.company=self.client.post('/api/v1/erp/companies/',{'name':'Services','currency':'USD'}).data['id']
+
+    def draft(self):
+        from django.utils import timezone
+        return self.client.post('/api/v1/erp/documents/',{'company':self.company,'number':'INV-1','type':'invoice','party_name':'Client','issue_date':timezone.now().date().isoformat(),'lines':[{'description':'Consulting','quantity':'2','unit_price':'50','tax_rate':'10'}]},format='json')
+
+    def test_invoice_post_partial_payment_and_retry(self):
+        response=self.draft();self.assertEqual(response.status_code,201,response.data)
+        pk=response.data['id'];self.assertEqual(Decimal(response.data['total']),Decimal('110'))
+        self.assertEqual(self.client.post(f'/api/v1/erp/documents/{pk}/post/',{'company':self.company}).status_code,200)
+        payload={'company':self.company,'reference':'PAY-1','amount':'40'}
+        self.assertEqual(self.client.post(f'/api/v1/erp/documents/{pk}/payment/',payload).data['status'],'partial')
+        self.assertEqual(self.client.post(f'/api/v1/erp/documents/{pk}/payment/',payload).status_code,200)
+        from .models import Payment
+        self.assertEqual(Payment.objects.count(),1)
+        payload['amount']='80';payload['reference']='PAY-2'
+        self.assertEqual(self.client.post(f'/api/v1/erp/documents/{pk}/payment/',payload).status_code,400)
+        payload['amount']='70'
+        self.assertEqual(self.client.post(f'/api/v1/erp/documents/{pk}/payment/',payload).data['status'],'paid')
+        self.assertEqual(self.client.get('/api/v1/erp/dashboard/',{'company':self.company}).data['metrics']['receivables'],0)
+
+    def test_finance_is_denied_without_permission(self):
+        from django.contrib.auth import get_user_model
+        from erp_foundation.testing import add_member
+        member=get_user_model().objects.create_user(email='member@example.com',password='pass')
+        add_member(self.tenant,member)
+        self.client.force_authenticate(member)
+        for endpoint in ('dashboard','accounts','journals','documents','reconciliation'):
+            self.assertEqual(self.client.get(f'/api/v1/erp/{endpoint}/').status_code,403)
+
+    def test_company_selection_required_with_multiple_companies(self):
+        self.client.post('/api/v1/erp/companies/',{'name':'Other','currency':'ZAR'})
+        self.assertEqual(self.client.get('/api/v1/erp/dashboard/').status_code,400)
+        self.assertEqual(self.client.get('/api/v1/erp/dashboard/',{'company':self.company}).data['currency'],'USD')
+
+    def test_wrong_company_period_and_date_rejected(self):
+        response=self.draft();pk=response.data['id']
+        from .models import FinancialDocument
+        from .workflows import post_document
+        document=FinancialDocument.objects.get(pk=pk)
+        post_document(document,self.user)
+        journal=document.__class__.objects.get(pk=pk).journal_entry
+        journal.status='draft';journal.entry_date=date(2000,1,1);journal.save()
+        with self.assertRaises(ValidationError):post_journal_entry(journal.pk,self.user)

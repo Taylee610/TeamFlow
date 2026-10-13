@@ -13,7 +13,7 @@ class Project(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-        unique_together = ('owner', 'name')
+        unique_together = ('tenant', 'owner', 'name')
 
     def __str__(self):
             return self.name
@@ -50,6 +50,7 @@ class Task(models.Model):
     due_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     attachment = models.FileField(upload_to='task_files/', blank=True, null=True)
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='child_tasks')
@@ -62,6 +63,24 @@ class Task(models.Model):
 
     def __str__(self):
         return f"{self.title}({self.project.name})"
+
+    def save(self, *args, **kwargs):
+        from django.utils import timezone
+        previous = type(self).objects.filter(pk=self.pk).values('status', 'due_date').first() if self.pk else None
+        previous_status = previous['status'] if previous else None
+        changed = previous_status != self.status
+        reset_reminder = previous and (previous['due_date'] != self.due_date or (previous_status == self.DONE and self.status != self.DONE))
+        if reset_reminder:
+            self.reminder_sent_at = None
+            if kwargs.get('update_fields') is not None and ('due_date' in kwargs['update_fields'] or 'status' in kwargs['update_fields']):
+                kwargs['update_fields'] = set(kwargs['update_fields']) | {'reminder_sent_at'}
+        if self.status == self.DONE and changed:
+            self.completed_at = timezone.now()
+        elif self.status != self.DONE:
+            self.completed_at = None
+        if kwargs.get('update_fields') is not None and 'status' in kwargs['update_fields']:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | {'completed_at'}
+        super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         return reverse("project-detail", args=[self.project_id])

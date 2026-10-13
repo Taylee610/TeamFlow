@@ -48,6 +48,12 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    const expired = () => { setUser(null); setWorkspace(null); setWorkspaces([]) }
+    window.addEventListener('auth-expired', expired)
+    return () => window.removeEventListener('auth-expired', expired)
+  }, [])
+
   async function login(email, password) {
     const { data } = await api.post('/auth/token/', { email, password })
     localStorage.setItem('access_token', data.access)
@@ -63,7 +69,8 @@ export function AuthProvider({ children }) {
     return login(email, password)
   }
 
-  function logout() {
+  async function logout() {
+    try { await api.post('/auth/logout/', { refresh: localStorage.getItem('refresh_token') }) } catch { /* Always clear this device. */ }
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('workspace_id')
@@ -73,7 +80,7 @@ export function AuthProvider({ children }) {
   }
 
   const isAdmin = workspace?.role === 'admin'
-  const isManagerOrAdmin = isAdmin
+  const isManagerOrAdmin = isAdmin || workspace?.permissions?.includes('projects.manage')
 
   const value = { user, loading, login, signup, logout, isAuthenticated: !!user, isAdmin, isManagerOrAdmin,
     workspaces, workspace, workspaceError, refreshWorkspaces, selectWorkspace }

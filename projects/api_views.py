@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
+import logging
+from django.db import transaction
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
@@ -31,6 +33,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return qs
         return qs.filter(Q(owner=user) | Q(members=user)).distinct()
 
+    @transaction.atomic
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user, tenant=workspace_membership(self.request).tenant)
 
@@ -93,6 +96,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             return qs
         return qs.filter(Q(project__owner=user) | Q(project__members=user)).distinct()
 
+    @transaction.atomic
     def perform_create(self, serializer):
         project = serializer.validated_data.get('project')
 
@@ -101,13 +105,18 @@ class TaskViewSet(viewsets.ModelViewSet):
         membership = workspace_membership(self.request)
         if project.tenant_id != membership.tenant_id or not (is_owner or is_member or can_admin_workspace(membership)):
             raise PermissionDenied('You may only create tasks in projects you belong to.')
+        from workspace_tools.quotas import enforce_upload_limit
+        enforce_upload_limit(membership.tenant, serializer.validated_data.get('attachment'))
         task = serializer.save()
         self._notify_task_update(task)
         if task.assigned_to_id:
             send_async(send_task_assigned_email, task, assigned_by=self.request.user)
 
+    @transaction.atomic
     def perform_update(self, serializer):
         previous_assignee_id = serializer.instance.assigned_to_id
+        from workspace_tools.quotas import enforce_upload_limit
+        enforce_upload_limit(serializer.instance.project.tenant, serializer.validated_data.get('attachment'))
         task = serializer.save()
         self._notify_task_update(task)
         if task.assigned_to_id and task.assigned_to_id != previous_assignee_id:
@@ -135,7 +144,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 }
             )
         except Exception:
-            pass
+            logging.getLogger(__name__).exception('Task broadcast failed for task %s', task.pk)
 
 
 class DashboardStatsView(APIView):
@@ -157,7 +166,7 @@ class DashboardStatsView(APIView):
 
         open_tasks = tasks.exclude(status=Task.DONE).count()
         completed_tasks = tasks.filter(status=Task.DONE).count()
-        completed_last_week = tasks.filter(status=Task.DONE, updated_at__gte=week_ago).count()
+        completed_last_week = tasks.filter(status=Task.DONE, completed_at__gte=week_ago).count()
 
         status_counts = {key: tasks.filter(status=key).count() for key, _label in Task.STATUS_CHOICES}
 
@@ -166,7 +175,7 @@ class DashboardStatsView(APIView):
             day = (now - timedelta(days=i)).date()
             daily_completed.append({
                 'label': day.strftime('%a'),
-                'count': tasks.filter(status=Task.DONE, updated_at__date=day).count(),
+                'count': tasks.filter(status=Task.DONE, completed_at__date=day).count(),
             })
 
         overdue_qs = (

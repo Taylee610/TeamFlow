@@ -136,6 +136,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         return Response(ConversationSerializer(conversation, context={'request': request}).data)
 
     @action(detail=True, methods=['get', 'post'], url_path='messages')
+    @transaction.atomic
     def messages(self, request, pk=None):
         conversation = self.get_object()
 
@@ -149,6 +150,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
         serializer = MessageCreateSerializer(data=request.data, context={'conversation': conversation})
         serializer.is_valid(raise_exception=True)
+        from workspace_tools.quotas import enforce_upload_limit
+        enforce_upload_limit(conversation.tenant, serializer.validated_data.get('attachment'))
         message = serializer.save(conversation=conversation, sender=request.user)
 
         Conversation.objects.filter(pk=conversation.pk).update(updated_at=timezone.now())

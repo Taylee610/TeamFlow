@@ -1,93 +1,43 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { ArrowDownRight, ArrowUpRight, BookOpen, Building2, CheckCircle2, CircleDollarSign, Landmark, PackageCheck, RefreshCw, Search, ShoppingCart, WalletCards } from 'lucide-react'
+import { Plus, Download, RefreshCw, Landmark } from 'lucide-react'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts'
 import api from '../api/axios'
+import Modal from '../components/Modal'
+import { useAuth } from '../context/AuthContext'
+import { errorText, download } from './Tools'
 
-const money = (value, currency = 'USD') => new Intl.NumberFormat('en-ZW', { style: 'currency', currency }).format(Number(value || 0))
-const tabs = [
-  ['overview', 'Overview'], ['accounts', 'Chart of accounts'], ['journals', 'Journals'],
-  ['documents', 'Invoices & bills'], ['procurement', 'Procurement'], ['reports', 'Trial balance'], ['reconciliation', 'Reconciliation'],
-]
+const fieldClass='w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-600'
+const buttonClass='rounded-lg bg-brand-600 px-4 py-2 text-sm text-white disabled:opacity-50'
+const tabs=[['overview','Overview'],['accounts','Accounts'],['journals','Journals'],['documents','Invoices & bills'],['procurement','Procurement'],['reports','Trial balance'],['reconciliation','Reconciliation']]
+const columns={accounts:[['code','Code'],['name','Account'],['account_type','Type'],['is_active','Active']],journals:[['reference','Reference'],['date','Date'],['description','Description'],['debit','Debit'],['credit','Credit'],['status','Status']],documents:[['number','Number'],['type','Type'],['party','Client / supplier'],['date','Date'],['total','Total'],['outstanding','Outstanding'],['status','Status']],procurement:[['number','Number'],['supplier','Supplier'],['date','Date'],['total','Total'],['status','Status']],reports:[['account__code','Code'],['account__name','Account'],['debit','Debit'],['credit','Credit']],reconciliation:[['date','Date'],['reference','Reference'],['amount','Amount'],['bank','Bank'],['matched','Matched']]}
+const money=(value,currency)=>new Intl.NumberFormat(undefined,{style:'currency',currency:currency||'USD'}).format(Number(value||0))
+const today=()=>new Date().toLocaleDateString('en-CA')
 
-function Badge({ children, tone = 'slate' }) {
-  const colors = { green: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-950 dark:text-emerald-300', amber: 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-950 dark:text-amber-300', blue: 'bg-blue-50 text-blue-700 ring-blue-600/20 dark:bg-blue-950 dark:text-blue-300', slate: 'bg-slate-100 text-slate-700 ring-slate-500/20 dark:bg-slate-700 dark:text-slate-200' }
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${colors[tone]}`}>{children}</span>
-}
-
-function Loading() { return <div className="p-16 text-center text-slate-500"><RefreshCw className="mx-auto mb-3 animate-spin" />Loading live ERP data…</div> }
-function Empty({ text }) { return <div className="rounded-xl border border-dashed border-slate-300 p-12 text-center text-slate-500 dark:border-slate-700">{text}</div> }
-
-export default function ERP() {
-  const location = useLocation()
-  const current = new URLSearchParams(location.search).get('view') || 'overview'
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [query, setQuery] = useState('')
-
-  useEffect(() => {
-    const endpoint = { overview: 'dashboard/', accounts: 'accounts/', journals: 'journals/', documents: 'documents/', procurement: 'procurement/', reports: 'reports/trial-balance/', reconciliation: 'reconciliation/' }[current]
-    setLoading(true); setError('')
-    api.get(`/v1/erp/${endpoint}`).then(({ data }) => setData(data)).catch((err) => setError(err.response?.data?.detail || 'Could not load ERP data.')).finally(() => setLoading(false))
-  }, [current])
-
-  const rows = useMemo(() => Array.isArray(data) ? data.filter(row => JSON.stringify(row).toLowerCase().includes(query.toLowerCase())) : [], [data, query])
-
-  return <div className="min-h-full bg-[#f5f4f1] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-    <header className="border-b border-slate-200 bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div><div className="flex items-center gap-2 text-sm font-medium text-brand-600"><Building2 size={16} /> Taylee</div><h1 className="mt-1 text-2xl font-semibold tracking-tight">Finance & operations</h1></div>
-        <div className="flex items-center gap-3"><Badge tone="green"><span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />Books open · July 2026</Badge><button onClick={() => window.location.reload()} className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800"><RefreshCw size={17} /></button></div>
-      </div>
-      <nav className="mt-6 flex gap-1 overflow-x-auto">
-        {tabs.map(([key, label]) => <NavLink key={key} to={`/erp?view=${key}`} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium ${current === key ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>{label}</NavLink>)}
-      </nav>
-    </header>
-
-    <main className="p-7">
-      {current !== 'overview' && <div className="mb-5 flex items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">{tabs.find(x => x[0] === current)?.[1]}</h2><p className="text-sm text-slate-500">Tenant-scoped live records from the accounting API</p></div><label className="relative"><Search size={16} className="absolute left-3 top-3 text-slate-400" /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search records" className="w-64 rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-900" /></label></div>}
-      {loading ? <Loading /> : error ? <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-700">{error}</div> : current === 'overview' ? <Overview data={data} /> : <DataView type={current} rows={rows} />}
-    </main>
+export default function ERP(){
+  const current=new URLSearchParams(useLocation().search).get('view')||'overview'
+  const valid=tabs.some(([key])=>key===current)
+  const {isAdmin,workspace}=useAuth(),canManage=isAdmin||workspace?.permissions?.includes('finance.manage')
+  const [companies,setCompanies]=useState([]),[company,setCompany]=useState(''),[data,setData]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(false),[page,setPage]=useState(1),[dialog,setDialog]=useState(null),[refresh,setRefresh]=useState(0)
+  useEffect(()=>{let active=true;api.get('/v1/erp/companies/').then(({data})=>{if(active){setCompanies(data);setCompany(value=>data.some(x=>String(x.id)===String(value))?value:String(data[0]?.id||''))}}).catch(e=>active&&setError(errorText(e)));return()=>{active=false}},[refresh])
+  useEffect(()=>setPage(1),[current,company])
+  useEffect(()=>{let active=true;if(!company||!valid)return;setLoading(true);setError('');const endpoint={overview:'dashboard/',accounts:'accounts/',journals:'journals/',documents:'documents/',procurement:'procurement/',reports:'reports/trial-balance/',reconciliation:'reconciliation/'}[current];api.get(`/v1/erp/${endpoint}`,{params:{company,page}}).then(({data})=>active&&setData(data)).catch(e=>active&&setError(errorText(e))).finally(()=>active&&setLoading(false));return()=>{active=false}},[current,company,page,refresh])
+  const currency=companies.find(x=>String(x.id)===String(company))?.base_currency_id
+  async function post(row){try{await api.post(`/v1/erp/documents/${row.id}/post/`,{company:Number(company)});setRefresh(x=>x+1)}catch(e){setError(errorText(e))}}
+  return <div className="min-h-full bg-slate-50 p-7 dark:bg-slate-950"><header className="flex flex-wrap items-center justify-between gap-4"><div><Landmark className="mb-3 text-brand-500"/><h1 className="text-3xl font-semibold">Finance & operations</h1><p className="mt-2 text-sm text-slate-500">Company-specific books and real transaction data.</p></div><div className="flex items-center gap-3"><select aria-label="Company" className={fieldClass} value={company} onChange={e=>setCompany(e.target.value)}><option value="">Select a company</option>{companies.map(x=><option key={x.id} value={x.id}>{x.name} · {x.base_currency_id}</option>)}</select>{canManage&&<button className="whitespace-nowrap text-sm" onClick={()=>setDialog({kind:'company'})}>Add company</button>}<button aria-label="Refresh finance" onClick={()=>setRefresh(x=>x+1)}><RefreshCw size={18}/></button></div></header>
+    <nav className="my-6 flex gap-2 overflow-x-auto">{tabs.map(([key,label])=><NavLink key={key} to={`/erp?view=${key}`} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm ${current===key?'bg-brand-600 text-white':'bg-white dark:bg-slate-800'}`}>{label}</NavLink>)}</nav>
+    {error&&<p role="alert" className="mb-5 rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+    {!valid?<p>Choose a finance view above.</p>:!company?<div className="rounded-xl border border-dashed p-12 text-center text-slate-500">{canManage?'Create a company to set up its currency, chart of accounts and current-year accounting periods.':'Your administrator must configure a company and finance permissions.'}</div>:loading?<p className="p-12 text-center">Loading…</p>:data&&current==='overview'?<><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[['Receivables',money(data.metrics.receivables,data.currency)],['Payables',money(data.metrics.payables,data.currency)],['Posted journals',data.metrics.posted_journals],['Stock units',data.metrics.stock_units]].map(([label,value])=><section key={label} className="rounded-2xl border bg-white p-6 dark:bg-slate-900"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></section>)}</div><section className="mt-6 rounded-2xl border bg-white p-6 dark:bg-slate-900"><h2 className="font-semibold">Recorded cash movements</h2><p className="mb-6 mt-1 text-xs text-slate-500">Posted entries to the cash account in {data.currency}. This is historical activity.</p>{data.cash_flow.length?<ResponsiveContainer width="100%" height={280}><BarChart data={data.cash_flow.map(x=>({...x,inflow:Number(x.inflow),outflow:Number(x.outflow)}))}><XAxis dataKey="day"/><YAxis/><Tooltip/><Legend/><Bar dataKey="inflow" name="Cash in" fill="#059669"/><Bar dataKey="outflow" name="Cash out" fill="#f1645c"/></BarChart></ResponsiveContainer>:<p className="py-12 text-center text-slate-500">No posted cash transactions yet.</p>}</section><section className="mt-6 rounded-2xl border bg-white p-6 dark:bg-slate-900"><h2 className="mb-4 font-semibold">Recent posted journals</h2>{data.recent_journals.map(x=><div key={x.id} className="flex justify-between border-t py-3 text-sm"><span>{x.reference} · {x.description}</span><span>{x.entry_date}</span></div>)}{!data.recent_journals.length&&<p className="text-sm text-slate-500">No journals posted yet.</p>}</section></>:data?.results&&<>
+      {current==='documents'&&<div className="mb-4 flex gap-3">{canManage&&<button className={buttonClass} onClick={()=>setDialog({kind:'document'})}><Plus size={15} className="mr-2 inline"/>New invoice or bill</button>}<button className="text-sm" onClick={()=>download(`/v1/erp/documents/export/?company=${company}`,'statement.csv').catch(e=>setError(errorText(e)))}><Download size={15} className="mr-2 inline"/>Export statement</button></div>}
+      <div className="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900"><table className="w-full text-left text-sm"><thead><tr>{columns[current].map(([key,label])=><th key={key} className="border-b px-4 py-3">{label}</th>)}{current==='documents'&&canManage&&<th className="border-b px-4 py-3">Actions</th>}</tr></thead><tbody>{data.results.map((row,i)=><tr key={row.id||row.account_id||i}>{columns[current].map(([key])=><td key={key} className="border-b px-4 py-3">{['total','outstanding','amount','debit','credit'].includes(key)?money(row[key],row.currency||currency):typeof row[key]==='boolean'?(row[key]?'Yes':'No'):row[key]||'—'}</td>)}{current==='documents'&&canManage&&<td className="border-b px-4 py-3">{row.status==='draft'?<button className="text-brand-500" onClick={()=>post(row)}>Post to books</button>:['posted','partial'].includes(row.status)?<button className="text-brand-500" onClick={()=>setDialog({kind:'payment',row})}>Record payment</button>:null}</td>}</tr>)}</tbody></table>{!data.results.length&&<p className="p-12 text-center text-slate-500">No records yet.</p>}</div>{data.count>10&&<div className="mt-4 flex justify-between text-sm"><button disabled={!data.previous} onClick={()=>setPage(p=>p-1)}>Previous</button><span>Page {page}</span><button disabled={!data.next} onClick={()=>setPage(p=>p+1)}>Next</button></div>}
+    </>}
+    {dialog&&<FinanceEditor dialog={dialog} company={company} currency={currency} onClose={()=>setDialog(null)} onSaved={()=>{setDialog(null);setRefresh(x=>x+1)}}/>}
   </div>
 }
 
-function Overview({ data }) {
-  const m = data?.metrics || {}
-  const cards = [
-    ['Receivables', money(m.receivables), ArrowUpRight, 'Collectable from customers', 'text-emerald-600', 'bg-emerald-50 dark:bg-emerald-950'],
-    ['Payables', money(m.payables), ArrowDownRight, 'Outstanding supplier bills', 'text-amber-600', 'bg-amber-50 dark:bg-amber-950'],
-    ['Posted journals', m.posted_journals, BookOpen, 'Balanced entries in the GL', 'text-brand-600', 'bg-brand-50 dark:bg-brand-950'],
-    ['Stock on hand', `${Number(m.stock_units || 0).toLocaleString()} units`, PackageCheck, 'Across active warehouses', 'text-blue-600', 'bg-blue-50 dark:bg-blue-950'],
-  ]
-  return <>
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value, Icon, note, icon, bg]) => <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="flex items-start justify-between"><div><p className="text-sm font-medium text-slate-500">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p></div><div className={`rounded-xl p-2.5 ${bg} ${icon}`}><Icon size={19} /></div></div><p className="mt-4 text-xs text-slate-400">{note}</p></div>)}</div>
-    <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="flex items-center justify-between"><div><h3 className="font-semibold">Cash flow snapshot</h3><p className="text-sm text-slate-500">Operational position for the current period</p></div><Landmark className="text-brand-500" /></div><div className="mt-8 flex h-44 items-end gap-4">{[42, 66, 51, 83, 58, 92, 76, 100, 72, 88, 64, 94].map((x, i) => <div key={i} className="group flex-1"><div className="rounded-t-md bg-brand-500/80 transition hover:bg-brand-500" style={{ height: `${x}%` }} /></div>)}</div><div className="mt-3 flex justify-between text-xs text-slate-400"><span>Jul 1</span><span>Jul 7</span><span>Jul 14</span><span>Jul 21</span><span>Jul 31</span></div></section>
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"><h3 className="font-semibold">Control centre</h3><div className="mt-4 space-y-3"><Control icon={CheckCircle2} title="Journal integrity" detail="All posted entries are balanced" tone="green" /><Control icon={ShoppingCart} title="Purchase orders" detail={`${m.open_purchase_orders || 0} currently open`} tone="amber" /><Control icon={WalletCards} title="Bank reconciliation" detail="Ready for statement import" tone="blue" /></div></section>
-    </div>
-    <section className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="border-b border-slate-100 px-6 py-4 dark:border-slate-800"><h3 className="font-semibold">Recent journal activity</h3></div>{data?.recent_journals?.length ? data.recent_journals.map(x => <div key={x.id} className="flex items-center justify-between border-b border-slate-100 px-6 py-4 last:border-0 dark:border-slate-800"><div><p className="text-sm font-medium">{x.reference}</p><p className="text-xs text-slate-500">{x.description || 'General journal'}</p></div><div className="text-right"><Badge tone="green">Posted</Badge><p className="mt-1 text-xs text-slate-400">{x.entry_date}</p></div></div>) : <Empty text="No posted journals yet" />}</section>
-  </>
-}
-
-function Control({ icon: Icon, title, detail, tone }) { return <div className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 dark:border-slate-800"><div className="rounded-lg bg-slate-50 p-2 dark:bg-slate-800"><Icon size={18} /></div><div className="min-w-0 flex-1"><p className="text-sm font-medium">{title}</p><p className="text-xs text-slate-500">{detail}</p></div><Badge tone={tone}>Healthy</Badge></div> }
-
-function DataView({ type, rows }) {
-  if (!rows.length) return <Empty text={type === 'reconciliation' ? 'No bank transactions imported yet. Import a statement to begin matching.' : 'No matching records found.'} />
-  const configs = {
-    accounts: [['code', 'Code'], ['name', 'Account'], ['account_type', 'Type'], ['is_active', 'Status']],
-    journals: [['reference', 'Reference'], ['date', 'Date'], ['description', 'Description'], ['debit', 'Debit'], ['credit', 'Credit'], ['status', 'Status']],
-    documents: [['number', 'Number'], ['type', 'Type'], ['party', 'Customer / supplier'], ['date', 'Issued'], ['due_date', 'Due'], ['total', 'Total'], ['status', 'Status']],
-    procurement: [['number', 'PO number'], ['supplier', 'Supplier'], ['date', 'Date'], ['total', 'Total'], ['status', 'Status']],
-    reports: [['account__code', 'Code'], ['account__name', 'Account'], ['account__account_type', 'Type'], ['debit', 'Debit'], ['credit', 'Credit']],
-    reconciliation: [['date', 'Date'], ['reference', 'Reference'], ['bank', 'Bank'], ['amount', 'Amount'], ['matched', 'Match status']],
-  }
-  const columns = configs[type]
-  const render = (key, value, row) => {
-    if (['debit', 'credit', 'total', 'amount'].includes(key)) return <span className="font-medium tabular-nums">{money(value, row.currency)}</span>
-    if (key === 'is_active') return <Badge tone={value ? 'green' : 'slate'}>{value ? 'Active' : 'Inactive'}</Badge>
-    if (key === 'matched') return <Badge tone={value ? 'green' : 'amber'}>{value ? 'Matched' : 'Unmatched'}</Badge>
-    if (key === 'status') return <Badge tone={['posted', 'paid', 'approved', 'confirmed'].includes(value) ? 'green' : value === 'draft' ? 'slate' : 'amber'}>{value}</Badge>
-    return value || '—'
-  }
-  return <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-800/60"><tr>{columns.map(([key, label]) => <th key={key} className="px-5 py-3.5 font-semibold">{label}</th>)}</tr></thead><tbody>{rows.map((row, i) => <tr key={row.id || i} className="border-t border-slate-100 hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/40">{columns.map(([key]) => <td key={key} className="px-5 py-4">{render(key, row[key], row)}</td>)}</tr>)}</tbody></table></div></div>
+function FinanceEditor({dialog,company,currency,onClose,onSaved}){
+  const [values,setValues]=useState(dialog.kind==='payment'?{amount:dialog.row.outstanding,reference:'',date:today()}:{name:'',currency:'USD',number:'',type:'invoice',party_name:'',party_email:'',issue_date:today(),due_date:today()}),[lines,setLines]=useState([{description:'',quantity:1,unit_price:'',tax_rate:0}]),[error,setError]=useState(''),[busy,setBusy]=useState(false)
+  const fields=dialog.kind==='company'?[['name','Company name'],['currency','Currency code']]:dialog.kind==='payment'?[['amount',`Amount (${currency})`,'number'],['reference','Unique payment reference'],['date','Payment date','date']]:[['number','Document number'],['type','Type','select'],['party_name','Customer / supplier'],['party_email','Contact email','email'],['issue_date','Issue date','date'],['due_date','Due date','date']]
+  async function save(e){e.preventDefault();setBusy(true);setError('');try{const path=dialog.kind==='company'?'/v1/erp/companies/':dialog.kind==='payment'?`/v1/erp/documents/${dialog.row.id}/payment/`:'/v1/erp/documents/';const payload=dialog.kind==='company'?values:dialog.kind==='payment'?{...values,company:Number(company)}:{...values,company:Number(company),lines,due_date:values.due_date||null};await api.post(path,payload);onSaved()}catch(e){setError(errorText(e))}finally{setBusy(false)}}
+  return <Modal title={dialog.kind==='company'?'Set up company':dialog.kind==='payment'?`Payment for ${dialog.row.number}`:'Create draft document'} onClose={onClose}><form onSubmit={save} className="max-h-[70vh] space-y-4 overflow-y-auto">{fields.map(([key,label,type])=><label key={key} className="block text-sm">{label}{type==='select'?<select className={fieldClass} value={values[key]} onChange={e=>setValues(v=>({...v,[key]:e.target.value}))}><option value="invoice">Invoice</option><option value="bill">Bill</option></select>:<input className={fieldClass} type={type||'text'} step={type==='number'?'0.01':undefined} required={!['party_email','due_date'].includes(key)} value={values[key]||''} onChange={e=>setValues(v=>({...v,[key]:e.target.value}))}/>}</label>)}{dialog.kind==='document'&&<><h3 className="font-medium">Line items ({currency})</h3>{lines.map((line,i)=><div key={i} className="space-y-2 rounded-lg border p-3">{[['description','Description'],['quantity','Quantity'],['unit_price','Unit price'],['tax_rate','Tax %']].map(([key,label])=><label key={key} className="block text-xs">{label}<input required className={fieldClass} type={key==='description'?'text':'number'} step="any" min="0" value={line[key]} onChange={e=>setLines(items=>items.map((x,j)=>i===j?{...x,[key]:e.target.value}:x))}/></label>)}{lines.length>1&&<button type="button" className="text-xs text-red-600" onClick={()=>setLines(items=>items.filter((_,j)=>j!==i))}>Remove line</button>}</div>)}<button type="button" className="text-sm text-brand-500" onClick={()=>setLines(items=>[...items,{description:'',quantity:1,unit_price:'',tax_rate:0}])}>+ Add line</button></>}{dialog.kind==='company'&&<p className="text-xs text-slate-500">Creates a starter chart of accounts and monthly periods for the current year. Review these before using the books.</p>}{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}<button disabled={busy} className={buttonClass}>{busy?'Saving…':'Save'}</button></form></Modal>
 }

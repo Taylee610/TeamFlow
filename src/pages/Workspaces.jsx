@@ -34,7 +34,10 @@ export default function Workspaces() {
   async function perform(action) {
     setBusy(true); setError('')
     try { await action() } catch (err) {
-      setError(err.response?.data ? Object.values(err.response.data).flat().join(' ') : 'Could not complete this request. Please retry.')
+      const data = err.response?.data
+      setError(data && typeof data === 'object'
+        ? Object.values(data).flat().join(' ')
+        : 'The server could not save this change. Please check the backend terminal and retry.')
     } finally { setBusy(false) }
   }
 

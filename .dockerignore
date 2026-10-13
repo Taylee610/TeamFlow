@@ -1,0 +1,10 @@
+.git
+.venv
+node_modules
+dist
+.env
+*.sqlite3
+teamtaskdb
+media
+.cache
+__pycache__

@@ -2,16 +2,22 @@
 
 Use two PowerShell terminals. These commands use SQLite and a single-process in-memory channel layer, so PostgreSQL and Redis are not required for local development.
 
+The added tools also require a third terminal running `python manage.py run_worker` with the same database/environment. See [implemented tools and Paynow/Gmail setup](IMPLEMENTED_TOOLS.md). Restart the backend after upgrading dependencies and applying the latest migrations.
+
 ## Backend
 
 ```powershell
 cd C:\Users\lycon\OneDrive\Documents\CoreWebpplication
 $env:DEBUG = "True"
 $env:USE_POSTGRESQL = "False"
-$env:DB_NAME = "db.sqlite3"
+$teamflowData = Join-Path $env:LOCALAPPDATA "TeamFlow"
+New-Item -ItemType Directory -Force -Path $teamflowData | Out-Null
+$env:DB_NAME = Join-Path $teamflowData "db.sqlite3"
 $env:USE_IN_MEMORY_CHANNEL_LAYER = "True"
 .\.venv\Scripts\python.exe manage.py migrate
-.\.venv\Scripts\daphne.exe -b 127.0.0.1 -p 8000 teamtaskmanager.asgi:application
+if ($LASTEXITCODE -eq 0) {
+    .\.venv\Scripts\python.exe -m daphne -b 127.0.0.1 -p 8000 teamtaskmanager.asgi:application
+}
 ```
 
 On a fresh checkout, install Python dependencies first:
@@ -21,6 +27,8 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
+The AppData path avoids the database-write failure observed in the Documents project folder. Launching Daphne through Python avoids the Windows executable-launch denial observed for `daphne.exe`. This database starts empty; there are no default accounts. To create a Django administration account, run ` .\.venv\Scripts\python.exe manage.py createsuperuser` in another terminal with the same `DEBUG`, `USE_POSTGRESQL` and `DB_NAME` environment values. Choose your email and password interactively, then visit http://127.0.0.1:8000/admin/. Workspace administration is separate: sign in to the frontend and create a workspace.
+
 ## Frontend
 
 ```powershell
@@ -29,7 +37,7 @@ npm.cmd ci
 npm.cmd run dev -- --port 5173 --strictPort
 ```
 
-Visit http://localhost:5173. Use `npm.cmd` to avoid PowerShell execution-policy restrictions on `npm.ps1`. Sign up, create a workspace, then create a project. Workspace administrators can generate an invitation link from **Workspace & invitations**, share it themselves, and revoke pending invitations. No email is sent by this flow. A recipient signs in with the invited email and accepts the link. Existing members can then be added to individual projects.
+Visit http://localhost:5173. Use `npm.cmd` to avoid PowerShell execution-policy restrictions on `npm.ps1`. Sign up, create a workspace, then create a project. Workspace administrators can generate an invitation link from **Workspace & invitations**, share it themselves, and revoke pending invitations. Invitations and verification emails are queued for delivery by the worker; configure Gmail SMTP to send them, or inspect the worker console in development. A recipient signs in with the invited email and accepts the link. Production invitation acceptance requires verified email by default. Existing members can then be added to individual projects.
 
 `FRONTEND_URL` must match the frontend's address for invitation links. The local default is `http://localhost:5173`. In-memory Channels is for a single development process only; use Redis for multiple workers and production.
 
@@ -65,6 +73,6 @@ Validation completed: all 70 backend tests passed, the frontend production build
 
 Backend regression coverage includes workspace selection, global-admin isolation, support access, invitation expiry/replay/revocation, cross-workspace task/chat relationships, protected attachments, legacy mapping and actual WebSocket connections/revocation. Tests use SQLite; PostgreSQL concurrency and a complete browser journey still need validation.
 
-This is the workspace foundation stage, not a completed paid SaaS launch. Outstanding work includes verified email and password recovery, member removal and role administration UI, billing-provider integration and server-side entitlements, durable jobs, finance permission enforcement, truthful financial reporting, production configuration, dependency upgrades, backups and monitoring. `SaaSPlan` and `TenantSubscription` models already exist in `erp_operations`; they need a working billing lifecycle rather than duplicate models.
+The newer implementation adds account recovery and verification, role administration, durable jobs, finance permissions and posting/payment workflows, Paynow billing and trial/usage controls, backup tooling and website monitoring. See [implementation status](IMPLEMENTED_TOOLS.md) for verification and limits. Live Paynow/Gmail setup, hosting/TLS, tested PostgreSQL concurrency and restore rehearsals, broader ERP workflows and the separate advanced product ideas remain outstanding.
 
-The frontend dependency installation reported 5 advisories (2 moderate, 3 high); investigate and remediate before public deployment. The existing Django 5.0 requirement also needs an upgrade to a supported release. A passing build is not a dependency security clearance.
+The earlier frontend dependency installation reported 5 advisories (2 moderate, 3 high); investigate and remediate before public deployment. Django is now pinned to 5.2.18. A passing build is not a dependency security clearance.

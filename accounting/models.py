@@ -79,6 +79,19 @@ class Payment(models.Model):
     reference = models.CharField(max_length=80); payment_date = models.DateField(); amount = models.DecimalField(max_digits=19, decimal_places=4)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT); journal_entry = models.OneToOneField(JournalEntry, null=True, blank=True, on_delete=models.PROTECT)
 
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['company', 'reference'], name='unique_company_payment_reference')]
+
+class DocumentLine(models.Model):
+    document = models.ForeignKey(FinancialDocument, on_delete=models.CASCADE, related_name='lines')
+    description = models.CharField(max_length=240)
+    quantity = models.DecimalField(max_digits=12, decimal_places=4)
+    unit_price = models.DecimalField(max_digits=19, decimal_places=4)
+    tax_rate = models.DecimalField(max_digits=7, decimal_places=4, default=0)
+
+    class Meta:
+        constraints = [models.CheckConstraint(check=models.Q(quantity__gt=0, unit_price__gte=0, tax_rate__gte=0, tax_rate__lte=100), name='valid_document_line')]
+
 class BankAccount(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE); name = models.CharField(max_length=120); account_number = models.CharField(max_length=80)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT); ledger_account = models.ForeignKey(Account, on_delete=models.PROTECT)

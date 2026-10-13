@@ -32,5 +32,7 @@ class ProjectTaskConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def can_access(self):
+        from chat.middleware import resolve_user
+        self.scope['user'] = resolve_user(self.scope.get('jwt_token'))
         project = Project.objects.filter(pk=self.project_id).first()
         return bool(project and can_view_project(self.scope.get('user'), project))

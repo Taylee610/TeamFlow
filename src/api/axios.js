@@ -65,6 +65,7 @@ api.interceptors.response.use(
         refresh: refreshToken,
       })
       localStorage.setItem('access_token', data.access)
+      if (data.refresh) localStorage.setItem('refresh_token', data.refresh)
       resolveQueue(null, data.access)
       originalRequest.headers.Authorization = `Bearer ${data.access}`
       return api(originalRequest)
@@ -72,6 +73,7 @@ api.interceptors.response.use(
       resolveQueue(refreshError, null)
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
+      window.dispatchEvent(new Event('auth-expired'))
       return Promise.reject(refreshError)
     } finally {
       isRefreshing = false

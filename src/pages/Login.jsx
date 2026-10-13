@@ -67,6 +67,7 @@ export default function Login() {
         </form>
 
         <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
+          <Link to="/account/reset" className="block mb-3 text-brand-600 hover:underline">Forgot your password?</Link>
           No account?{' '}
           <Link to="/signup" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
             Sign up

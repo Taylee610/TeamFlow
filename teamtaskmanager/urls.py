@@ -12,14 +12,17 @@ from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from core.views import api_root, PrivateAttachmentView
+from core.health import readiness
 
 urlpatterns = [
+    path('health/ready/', readiness),
     path('admin/', admin.site.urls),
     path('', api_root, name='api-root'),
     path('api/', include('projects.api_urls')),
     path('api/chat/', include('chat.api_urls')),
     path('api/auth/', include('accounts.api_urls')),
     path('api/workspaces/', include('erp_foundation.api_urls')),
+    path('api/tools/', include('workspace_tools.urls')),
     path('api/files/<str:kind>/<int:pk>/', PrivateAttachmentView.as_view()),
     path('api/ai/', include('ai_assistant.urls')),
     path('api/v1/erp/', include('accounting.api_urls')),

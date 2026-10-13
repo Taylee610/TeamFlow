@@ -15,6 +15,7 @@ import os
 from decouple import config
 from datetime import timedelta
 from corsheaders.defaults import default_headers
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='dev-secret')
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [x.strip() for x in v.split(',') if x.strip()])
+if not DEBUG and (SECRET_KEY == 'dev-secret' or len(SECRET_KEY) < 32):
+    raise ImproperlyConfigured('Production requires a SECRET_KEY of at least 32 characters.')
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=not DEBUG, cast=bool)
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_CONTENT_TYPE_NOSNIFF = True
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=lambda v: [x.strip() for x in v.split(',') if x.strip()])
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -51,6 +62,8 @@ INSTALLED_APPS = [
     'erp_foundation',
     'accounting',
     'erp_operations',
+    'workspace_tools',
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 MIDDLEWARE = [
@@ -89,12 +102,15 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [config('REDIS_URL', default='redis://127.0.0.1:6379/0')],
         },
     },
 }
 if DEBUG and config('USE_IN_MEMORY_CHANNEL_LAYER', default=False, cast=bool):
     CHANNEL_LAYERS = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}
+if not DEBUG:
+    CACHES = {'default': {'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/0'), 'KEY_PREFIX': 'teamflow'}}
 
 USE_POSTGRESQL = config('USE_POSTGRESQL', default=True, cast=bool)
 
@@ -164,8 +180,11 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'user': '100/hour',
+        'user': '1000/hour',
         'ai': '20/hour',
+        'public_read': '300/hour',
+        'public_submit': '30/hour',
+        'auth': '20/hour',
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
@@ -174,7 +193,21 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'CHECK_REVOKE_TOKEN': True,
 }
+PASSWORD_RESET_TIMEOUT = 3600
+REQUIRE_VERIFIED_EMAIL = config('REQUIRE_VERIFIED_EMAIL', default=not DEBUG, cast=bool)
+PAYNOW_INTEGRATION_ID = config('PAYNOW_INTEGRATION_ID', default='')
+PAYNOW_INTEGRATION_KEY = config('PAYNOW_INTEGRATION_KEY', default='')
+PAYNOW_RESULT_URL = config('PAYNOW_RESULT_URL', default='')
+TRIAL_DAYS = config('TRIAL_DAYS', default=14, cast=int)
+if not 1 <= TRIAL_DAYS <= 90:
+    raise ImproperlyConfigured('TRIAL_DAYS must be between 1 and 90.')
+PUBLIC_API_URL = config('PUBLIC_API_URL', default='http://127.0.0.1:8000')
+if config('TRUST_PROXY_SSL_HEADER', default=False, cast=bool):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # --- Email ---
 # Defaults to printing emails to the console in dev. Point EMAIL_BACKEND /
@@ -186,6 +219,7 @@ EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_TIMEOUT = 15
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='TeamFlow <noreply@teamflow.local>')
 
 # Used to build links back to the app in emails (task assigned, etc.).
@@ -194,5 +228,12 @@ FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 # --- AI features (Anthropic) ---
 # Left blank => AI endpoints return a graceful 503 instead of crashing.
 ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY', default='')
+TAYLEE_ENGINE = config('TAYLEE_ENGINE', default='local_ml')
 ANTHROPIC_MODEL = config('ANTHROPIC_MODEL', default='claude-opus-4-8')
+
+LOGGING = {
+    'version': 1, 'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'root': {'handlers': ['console'], 'level': config('LOG_LEVEL', default='INFO')},
+}
 

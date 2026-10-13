@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -10,17 +11,22 @@ import Login from './pages/Login'
 import Signup from './pages/SignUp'
 import Workspaces from './pages/Workspaces'
 import Landing from './pages/Landing'
-import Dashboard from './pages/Dashboard'
+const Dashboard = lazy(() => import('./pages/Dashboard'))
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import Kanban from './pages/Kanban'
 import Chat from './pages/Chat'
 import Everything from './pages/Everything'
 import People from './pages/People'
-import ERP from './pages/ERP'
+const ERP = lazy(() => import('./pages/ERP'))
 import Settings from './pages/Settings'
 import Help from './pages/Help'
-import AIAssistant from './pages/AIAssistant'
+const AIAssistant = lazy(() => import('./pages/AIAssistant'))
+const Tools = lazy(() => import('./pages/Tools'))
+const PublicTools = lazy(() => import('./pages/PublicTools'))
+const AccountRecovery = lazy(() => import('./pages/AccountRecovery'))
+const Billing = lazy(() => import('./pages/Billing'))
+const WorkspaceAccess = lazy(() => import('./pages/WorkspaceAccess'))
 import ProjectWorkspace from './pages/ProjectWorkspace'
 import TaskDetail from './pages/TaskDetail'
 
@@ -30,11 +36,15 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <ToastContainer position="top-right" autoClose={3000} />
-          <Routes>
+          <Suspense fallback={<div className="p-10 text-center text-slate-500">Loading…</div>}><Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/workspaces" element={<Workspaces />} />
+            <Route path="/p/:id" element={<PublicTools kind="profiles" />} />
+            <Route path="/f/:id" element={<PublicTools kind="forms" />} />
+            <Route path="/account/reset" element={<AccountRecovery />} />
+            <Route path="/account/verify" element={<AccountRecovery />} />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
@@ -51,11 +61,15 @@ export default function App() {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/help" element={<Help />} />
                 <Route path="/ai" element={<AIAssistant />} />
+                <Route path="/tools" element={<Tools />} />
+                <Route path="/tools/:tool" element={<Tools />} />
+                <Route path="/billing" element={<Billing />} />
+                <Route path="/access" element={<WorkspaceAccess />} />
               </Route>
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          </Routes></Suspense>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

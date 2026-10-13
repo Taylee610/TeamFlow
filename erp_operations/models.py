@@ -93,5 +93,11 @@ class SavedReport(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE); owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE); name = models.CharField(max_length=120); definition = models.JSONField(default=dict)
 class SaaSPlan(models.Model):
     name = models.CharField(max_length=80); monthly_price = models.DecimalField(max_digits=12, decimal_places=2); limits = models.JSONField(default=dict)
+    is_public = models.BooleanField(default=False)
+    currency = models.CharField(max_length=3, default='USD')
 class TenantSubscription(models.Model):
     tenant = models.OneToOneField(Tenant, on_delete=models.CASCADE); plan = models.ForeignKey(SaaSPlan, on_delete=models.PROTECT); starts_on = models.DateField(); status = models.CharField(max_length=20, default="active")
+    paid_until = models.DateTimeField(null=True, blank=True)
+    cancel_at_period_end = models.BooleanField(default=False)
+    trial_used = models.BooleanField(default=False)
+    trial_ends_at = models.DateTimeField(null=True, blank=True)

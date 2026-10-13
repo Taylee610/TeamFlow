@@ -113,7 +113,19 @@ class ExchangeRate(models.Model):
     effective_on = models.DateField()
 
 
+class AuditLogQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValidationError('Audit logs are immutable.')
+
+    def delete(self):
+        raise ValidationError('Audit logs cannot be deleted.')
+
+    def _raw_delete(self, using):
+        raise ValidationError('Audit logs cannot be deleted.')
+
+
 class AuditLog(models.Model):
+    objects = AuditLogQuerySet.as_manager()
     tenant = models.ForeignKey(Tenant, on_delete=models.PROTECT, related_name="audit_logs")
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
     action = models.CharField(max_length=40)

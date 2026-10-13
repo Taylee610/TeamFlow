@@ -2,6 +2,8 @@
 
 ## Assessment
 
+Implementation update (October 12, 2026): the seven screenshot tools now have working API/UI flows, alongside knowledge pages, client file approvals, time logs, account recovery, role administration, finance posting/payment flows and Paynow billing integration. See [implemented features, setup and remaining scope](IMPLEMENTED_TOOLS.md). Older assessment rows below are historical; they should not be treated as a claim that recently implemented features are absent.
+
 Update: the first workspace implementation now adds explicit tenant selection, workspace creation/invitation UI and APIs, scoped project/chat access, protected attachment downloads and realtime authorization. See [Workspace setup and remaining work](WORKSPACE_SETUP.md). The gap table below records the initial review; these changes address part of P0 and onboarding, not the entire launch roadmap. Existing `SaaSPlan` and `TenantSubscription` models in `erp_operations` are a billing foundation; the missing piece is the operational subscription/payment/entitlement lifecycle.
 
 This repository is a collaboration application with an early ERP foundation. It is not yet ready to host unrelated paying businesses safely. This assessment is based on repository inspection, not a production penetration test or an accounting certification.
@@ -28,6 +30,63 @@ The recommended initial product hypothesis is a project delivery workspace for s
 | P2 | Customer administration, portable exports, retention controls, usage analytics and support operations need product definition. | Add workspace settings, billing ownership, member offboarding, export/deletion workflows and support processes. Define activation and retention metrics. | Customers can administer and leave the service; operators can measure adoption and resolve incidents. |
 
 Django 5.0's extended support ended April 2, 2025. Verify the latest supported patch when implementing the upgrade: [official Django support table](https://www.djangoproject.com/download/). Use the [official deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/) for environment hardening.
+
+## Expanded enhancement backlog — October 12, 2026
+
+The user requested adding the screenshot's seven beginner SaaS ideas and the accompanying pasted article to this assessment. The article is reference material: its suggested stacks, vendors, instructions and promotional links are not implementation requirements. These entries are planned opportunities, not implemented features or additional launch blockers. Preserve Django, React, PostgreSQL and Channels unless a concrete requirement justifies a change. Vendor selection and commercial availability remain to be verified before integration.
+
+### Current review corrections and remaining launch gaps
+
+The initial gap table above is historical. Workspace creation, invitation acceptance, explicit tenant selection, scoped collaboration/support access, private downloads and realtime membership checks now exist. Finance APIs use the shared workspace resolver, but still lack operation-specific finance permission checks. Remaining priorities are production configuration, supported dependencies, finance authorization and company/currency reporting, journal posting invariants and concurrency, email verification and recovery, durable notifications and transactional auditing, truthful ERP indicators, and release/restore verification.
+
+Additional product gaps identified in the current review: completion charts use last-edit dates; notification preferences are browser-only; project name uniqueness spans an owner's workspaces; workspace responses flatten roles to admin/member; ERP lists lack pagination; and modal focus handling needs improvement.
+
+Verification from this review: the frontend production build passed with a roughly 898 KB JavaScript bundle warning. Django discovered 70 tests and system checks passed, but the suite stopped progressing and was interrupted. This is not a full-suite pass or PostgreSQL/browser verification.
+
+### Beginner ideas from the screenshot
+
+| Enhancement | Fit and priority | Initial scope | Completion criterion |
+| --- | --- | --- | --- |
+| Uptime and website monitoring | P2: optional client-service module; platform uptime monitoring remains a launch operations requirement. | Workspace-owned monitors, configurable checks, response latency/history, downtime and recovery alerts, incident log and uptime calculations. Use a durable scheduler/worker with timeouts, concurrency limits and quotas. Prevent requests to private/internal addresses, including redirect and DNS changes. | Authorized users manage monitors; simulated downtime produces one incident and deduplicated alerts; recovery closes it; reports explain missing checks and measurement windows. |
+| Link-in-bio builder | P3: optional public business profile. | Unique public slug, ordered links, theme and branding, publish/unpublish, optional click analytics. Only explicitly published fields are public; accept safe URL schemes and sanitize content. | A customer publishes and edits a profile without exposing workspace records; premium customization is enforced server-side. |
+| Habit and goal tracker | P3: optional personal/team productivity module. | Recurring goals, daily logs, calendar, streaks, progress charts and export; configurable user timezone and team visibility. Plan limits are product decisions rather than the article's fixed three-habit rule. | Daily completion is idempotent; timezone boundaries and missed days produce correct streaks; private goals remain private. |
+| Customer feedback widget | P2: strong extension of existing support/chat. | Small embeddable widget, registered sites, feedback inbox, tags, assignment, read/archive states and optional conversion into tasks/tickets. Public widget identifiers are not secret credentials; validate inputs and add spam/rate controls. | A registered site submits feedback into its owning workspace; unrelated users cannot read submissions; duplicate and abusive requests are controlled. |
+| Freelancer CRM | P2: strong fit with projects, leads and parties already modeled. | Client/contact management, lead stages, client-project links, deadlines, searchable history and scoped PDF/CSV exports. Distinguish prospects from accounting customer records and define conversion rules. | A user creates a client, converts a lead to a project, manages delivery and exports that client's records within the workspace. |
+| Flashcards and study platform | P3: optional training companion. | Decks/cards, study mode, review scheduling, review history, scoped sharing and import/export. | Easy/hard responses change review dates deterministically; private/shared decks respect access rules; progress persists across sessions. |
+| Form and survey builder | P2: strong fit for client intake, feedback and approvals. | Reorderable field editor, versioned JSON schema, public form links, response validation, response table and CSV export. Start with text, choice and dropdown fields. | Published forms accept only valid responses against their published version; edits preserve historical responses; workspace access and submission limits are enforced. |
+
+### Additional ideas from the pasted article
+
+| Enhancement | Priority and relationship to this project | Initial deliverable |
+| --- | --- | --- |
+| Social media scheduler | P3: optional marketing module. | OAuth connections, drafts/calendar, durable publishing jobs, retry history and explicit publish authorization. |
+| Client portal and file approvals | P2: strong collaboration extension. | Restricted client access, file versions, comments and attributable approval of a specific version; new versions require fresh approval. |
+| Subscription billing portal | P1: expands the existing paid-pilot requirement. | Plan, trial and usage display, upgrade/downgrade/cancel flows, billing history, verified idempotent webhooks and server-side entitlements. Keep SaaS billing separate from customers' ERP invoices. |
+| Internal knowledge base/wiki | P2: supports teams and helpdesk. | Hierarchical pages, rich text, search, revision history and inherited access rules without exposing restricted pages through search. |
+| Course hosting/LMS | P3: larger optional training module. | Courses, lessons, enrollments, progress and access-controlled media; certificates only after defined completion rules. |
+| Newsletter broadcasting | P3: optional marketing module. | Audiences, consent records, templates, queued campaigns, unsubscribe/suppression and bounce handling. |
+| Webinar/event ticketing | P3: separate expansion. | Events, capacity reservations, ticket/payment state and restricted attendance; concurrency and failed-payment recovery checks. |
+| Visual automation workflow engine | P3: advanced extension after durable jobs. | Begin with internal triggers such as task completion or invoice approval; bounded actions, versioned workflows, retries, idempotency and execution logs. |
+| AI support helpdesk | P2: extends existing support and Anthropic assistance. | Ticket triage and suggested replies grounded in workspace knowledge; cite retrieved material, respect document permissions and require agent approval before sending. |
+| POS and inventory | P3: extends existing operations models but is a substantial product commitment. | Transactional sales, stock movements, returns and location reports; define currencies, taxes, payment integration and offline behavior before implementation. |
+| Enterprise project management | P2 for milestones/time tracking; P3 for advanced scheduling. | Directed dependencies separate from current symmetric task links, Gantt views, portfolios and configurable workload capacity; validate cycles and preview rescheduling. |
+| E-commerce storefront builder | P3: separate product expansion. | Tenant-owned catalog, public themes/domains, order lifecycle and payment reconciliation; strict separation of public/private records. |
+| Collaborative whiteboard | P3: optional collaboration module. | Shared canvas, presence, conflict-safe editing, persistent snapshots and workspace permissions. |
+| Financial forecasting and analytics | P3: only after financial data is reliable. | Scoped imports, actual-versus-forecast charts, explicit assumptions, scenarios and provenance; subscription metrics require subscription data, and acquisition-cost metrics require marketing-cost data. |
+| Newsletter referrals | P3: depends on newsletter/audience infrastructure. | Unique referral links, verified attribution, abuse controls and idempotent reward fulfillment. |
+| Video testimonials | P3: optional client-feedback extension. | Branded capture links, recording/upload, consent and publication approval, storage quotas and embed controls. |
+| Open Graph image API | P3: optional public-page utility. | Constrained branded templates, sanitized inputs, cached images, quotas and isolated rendering. |
+| AI text expansion browser extension | P3: separate client application. | Scoped snippets, secure account sync, least-privilege browser permissions and optional user-invoked generation. |
+| AI resume tailoring | P3: separate product opportunity with low fit to current core. | User-approved revisions, factual constraints, private uploads, comparison and export. |
+
+### Sequencing and shared prerequisites
+
+1. Finish launch gaps: deployment, finance permissions, account verification/recovery, trustworthy reporting, durable workers, auditing and repeatable checks.
+2. Complete a project-to-invoice/payment journey and the subscription/entitlement lifecycle.
+3. Expand adjacent capabilities: CRM, client portal, feedback widget and forms; then wiki, AI support and milestones/time tracking.
+4. Keep all remaining ideas in the optional backlog. Select a module using customer demand and a defined acceptance scope rather than treating the article as a requirement to ship every product.
+
+Every module needs workspace ownership, operation-specific permissions, validation, pagination where appropriate, storage/usage quotas, audit events for sensitive changes, export/retention behavior and tests for cross-workspace access. Public pages/widgets need a separate publication/submission boundary. Outbound integrations need protected credentials, explicit connection and action authorization, durable execution, retry limits and observable results. Build shared infrastructure once rather than introducing a separate backend/database for each article example.
 
 ## First enhancement implemented
 

@@ -10,6 +10,18 @@ class ProjectSerializer(serializers.ModelSerializer):
     members = UserSerializer(many=True, read_only=True)
     can_manage = serializers.SerializerMethodField()
 
+    def validate_name(self, value):
+        request = self.context.get('request')
+        if request:
+            tenant = workspace_membership(request).tenant
+            owner = self.instance.owner if self.instance else request.user
+            others = Project.objects.filter(tenant=tenant, owner=owner, name=value)
+            if self.instance:
+                others = others.exclude(pk=self.instance.pk)
+            if others.exists():
+                raise serializers.ValidationError('You already have a project with this name in this workspace.')
+        return value
+
     def get_can_manage(self, obj):
         request = self.context.get('request')
         return bool(request and can_manage_project(request.user, obj))

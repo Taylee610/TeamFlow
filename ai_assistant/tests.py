@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework.test import APITestCase
 from rest_framework import status
 
@@ -17,9 +18,11 @@ def _fake_message(text):
     return SimpleNamespace(content=[SimpleNamespace(type='text', text=text)])
 
 
+@override_settings(TAYLEE_ENGINE='anthropic')
 class TaskAssistViewTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(email='user@example.com', password='pass123')
+        create_workspace(self.user, 'AI team')
         self.client.force_authenticate(self.user)
 
     @patch('ai_assistant.views.get_client', return_value=None)
@@ -49,6 +52,7 @@ class TaskAssistViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
+@override_settings(TAYLEE_ENGINE='anthropic')
 class ProjectSummaryViewTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(email='owner@example.com', password='pass123')

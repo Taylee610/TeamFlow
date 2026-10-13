@@ -1,16 +1,18 @@
 import logging
-import threading
 
 logger = logging.getLogger(__name__)
 
 
 def send_async(fn, *args, **kwargs):
-    """Best-effort fire-and-forget so a slow SMTP call doesn't block the
-    request. Not a replacement for a real task queue -- no retries, and a
-    process restart drops anything in flight. Swap for Celery/RQ (Redis is
-    already running for Channels) if guaranteed delivery ever matters.
-    """
-    threading.Thread(target=_safe_call, args=(fn, *args), kwargs=kwargs, daemon=True).start()
+    """Persist delivery before returning; run_worker processes jobs with retries."""
+    from workspace_tools.services import enqueue
+    task = args[0]
+    kinds = {'send_task_assigned_email': 'task_assigned', 'send_due_date_reminder_email': 'task_reminder'}
+    if fn.__name__ not in kinds:
+        raise ValueError('Unsupported notification handler.')
+    assigned_by = kwargs.get('assigned_by')
+    return enqueue(kinds[fn.__name__], {'task': task.pk, 'assignee': task.assigned_to_id,
+                                       'assigned_by': assigned_by.pk if assigned_by else None})
 
 
 def _safe_call(fn, *args, **kwargs):

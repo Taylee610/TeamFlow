@@ -4,16 +4,21 @@ from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 
 
-@database_sync_to_async
-def _get_user_from_token(token):
-    from accounts.models import User
+def resolve_user(token):
+    if not token:
+        return AnonymousUser()
     try:
         access = AccessToken(token)
-        return User.objects.get(pk=access['user_id'], is_active=True)
-    except (TokenError, User.DoesNotExist, KeyError):
+        return JWTAuthentication().get_user(access)
+    except (TokenError, AuthenticationFailed, KeyError):
         return AnonymousUser()
+
+
+_get_user_from_token = database_sync_to_async(resolve_user)
 
 
 class JWTAuthMiddleware:
@@ -35,6 +40,7 @@ class JWTAuthMiddleware:
         token = parse_qs(query_string).get('token', [None])[0]
 
         scope['user'] = await _get_user_from_token(token) if token else AnonymousUser()
+        scope['jwt_token'] = token
         return await self.app(scope, receive, send)
 
 
