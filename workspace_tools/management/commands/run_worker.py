@@ -1,6 +1,6 @@
 import time
 from django.core.management.base import BaseCommand
-from django.db import close_old_connections
+from django.db import connections
 from workspace_tools.services import run_one, schedule_monitors
 
 
@@ -14,7 +14,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             while True:
-                close_old_connections()
+                # Embedded --once runs may share the caller's transaction.
+                # Closing its connection would abort that transaction on PostgreSQL.
+                for connection in connections.all(initialized_only=True):
+                    if not connection.in_atomic_block:
+                        connection.close_if_unusable_or_obsolete()
                 schedule_monitors()
                 processed = 0
                 while processed < options['limit'] and run_one():

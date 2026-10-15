@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.management import call_command
 from django.test import TestCase
+from django.db import connection
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework.test import APITestCase
@@ -70,6 +71,17 @@ class SendDueRemindersCommandTests(TestCase):
         call_command('send_due_reminders')
         call_command('send_due_reminders')
         call_command('run_worker', once=True)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_worker_preserves_callers_transaction(self):
+        call_command('send_due_reminders')
+        # SQLite ignores close() for its in-memory test database; detect the
+        # attempted close as well as checking actual job delivery and DB reuse.
+        with patch.object(connection, 'close') as close:
+            call_command('run_worker', once=True)
+            close.assert_not_called()
+        self.task.refresh_from_db()
+        self.assertIsNotNone(self.task.reminder_sent_at)
         self.assertEqual(len(mail.outbox), 1)
 
     def test_ignores_tasks_outside_window(self):
