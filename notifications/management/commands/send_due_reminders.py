@@ -3,7 +3,6 @@ from django.utils import timezone
 from datetime import timedelta
 
 from projects.models import Task
-from notifications.emails import send_due_date_reminder_email
 from django.db import transaction
 from workspace_tools.services import enqueue
 from erp_foundation.access import active_memberships
@@ -32,7 +31,8 @@ class Command(BaseCommand):
         sent = 0
         for task in due_soon:
             with transaction.atomic():
-                task = Task.objects.select_for_update().select_related('project', 'assigned_to').get(pk=task.pk)
+                # Lock only the task; PostgreSQL cannot lock the nullable assignee join.
+                task = Task.objects.select_for_update().get(pk=task.pk)
                 if task.reminder_sent_at or task.status == Task.DONE or not task.assigned_to or not task.due_date or not now <= task.due_date <= window_end:
                     continue
                 if not active_memberships(task.assigned_to).filter(tenant_id=task.project.tenant_id).exists():
