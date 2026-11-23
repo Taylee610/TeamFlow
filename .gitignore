@@ -217,6 +217,22 @@ tenant_map.py
 # Frontend
 node_modules/
 dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Local databases
 teamtaskdb
-.env.example
 teamtaskdb.sqlite3
+*.sqlite3
+*.db
+
+# Django generated files
+staticfiles/
+media/
+
+# IDE and editor files
+.vscode/
+.idea/
